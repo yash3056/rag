@@ -3,6 +3,12 @@ import sys
 from doctoembed import process_all, query_index, load_data
 from model import load_model, process_query_with_context
 
+# NEW IMPORTS FOR FASTAPI
+from fastapi import FastAPI, HTTPException, File, UploadFile  # NEW import
+from pydantic import BaseModel
+from typing import List, Dict, Any
+import uvicorn
+
 class DocumentQA:
     def __init__(self, pdf_folder="document", model_name="gemma3"):
         self.model_name = load_model(model_name)
@@ -66,6 +72,132 @@ class DocumentQA:
             print(displayed_text)
             print("-" * 40)
         
+# Global DocumentQA instance for FastAPI & CLI
+qa_system = DocumentQA()
+
+# NEW: Define FastAPI application and endpoints
+app = FastAPI()
+
+# NEW: Enable CORS to allow requests from the webpage
+from fastapi.middleware.cors import CORSMiddleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],       # Allow all origins for simplicity
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+class QuestionRequest(BaseModel):
+    query: str
+
+class AnswerResponse(BaseModel):
+    answer: str
+    sources: List[Dict[str, Any]]
+
+@app.post("/ask", response_model=AnswerResponse)
+def ask_question(request: QuestionRequest):
+    if not request.query.strip():
+        raise HTTPException(status_code=400, detail="Query cannot be empty")
+    answer, sources = qa_system.answer_question(request.query)
+    return {"answer": answer, "sources": sources}
+
+@app.post("/reload")
+def reload_index():
+    qa_system.initialize_document_system("document")
+    return {"message": "Document index reloaded."}
+
+# NEW: Endpoint to add a new source and rebuild embeddings
+@app.post("/add_source")
+def add_source(payload: dict):
+    filename = payload.get("filename")
+    if not filename:
+        raise HTTPException(status_code=400, detail="filename field missing")
+    # Assume the file has been added manually to the 'document' folder.
+    qa_system.initialize_document_system("document")
+    return {"message": f"Source '{filename}' added and document index updated."}
+
+# New endpoint to check if file exists
+@app.post("/check_file")
+async def check_file(payload: dict):
+    filename = payload.get("filename")
+    if not filename:
+        raise HTTPException(status_code=400, detail="filename field missing")
+    
+    document_folder = "document"
+    file_path = os.path.join(document_folder, filename)
+    
+    if os.path.exists(file_path):
+        return {"exists": True}
+    else:
+        return {"exists": False}
+
+# Improve the upload_source endpoint 
+@app.post("/upload_source")
+async def upload_source(file: UploadFile = File(...)):
+    try:
+        document_folder = "document"
+        os.makedirs(document_folder, exist_ok=True)
+        file_location = os.path.join(document_folder, file.filename)
+        
+        # Process file in chunks to handle large files better
+        with open(file_location, "wb") as buffer:
+            # Process file in chunks of 1MB
+            chunk_size = 1024 * 1024  # 1MB chunks
+            while True:
+                chunk = await file.read(chunk_size)
+                if not chunk:
+                    break
+                buffer.write(chunk)
+        
+        print(f"File successfully saved to {file_location}")
+        
+        # Reinitialize document system
+        qa_system.initialize_document_system(document_folder)
+        return {"message": f"File '{file.filename}' uploaded and document index updated."}
+    except Exception as e:
+        # Log the error details
+        error_message = f"Error uploading file: {str(e)}"
+        print(error_message)
+        # Consider saving the file anyway, even if indexing fails
+        raise HTTPException(status_code=500, detail=error_message)
+
+# NEW: Endpoint to list all PDF files in the document directory
+@app.get("/list_sources")
+async def list_sources():
+    document_folder = "document"
+    if not os.path.exists(document_folder):
+        os.makedirs(document_folder, exist_ok=True)
+        return {"sources": []}
+    
+    sources = []
+    for filename in os.listdir(document_folder):
+        if filename.lower().endswith(".pdf"):
+            file_path = os.path.join(document_folder, filename)
+            file_size = os.path.getsize(file_path)
+            sources.append({
+                "filename": filename,
+                "size": file_size,
+                "date_added": os.path.getctime(file_path)
+            })
+    
+    return {"sources": sources}
+
+@app.delete("/delete_source/{filename}")
+async def delete_source(filename: str):
+    try:
+        document_folder = "document"
+        file_path = os.path.join(document_folder, filename)
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            # Reinitialize document system after deletion
+            qa_system.initialize_document_system(document_folder)
+            return {"message": f"File '{filename}' deleted and index updated."}
+        else:
+            raise HTTPException(status_code=404, detail="File not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 def main():
     # Check if document folder exists, create if not
     if not os.path.exists("document"):
@@ -74,9 +206,6 @@ def main():
         print("Then restart the application.")
         return
         
-    # Initialize the QA system
-    qa_system = DocumentQA()
-    
     print("\n===== Document Question Answering System =====")
     print("Type 'exit' or 'quit' to end the session.")
     print("Type 'reload' to reload the document index.")
@@ -90,7 +219,7 @@ def main():
             break
         
         if query.lower() == 'reload':
-            qa_system.initialize_document_system()
+            qa_system.initialize_document_system("document")
             print("Document index reloaded.")
             continue
         
@@ -107,4 +236,8 @@ def main():
         qa_system.display_sources(sources)
 
 if __name__ == "__main__":
-    main()
+    # To run the API server, pass 'serve' as an argument (e.g., python main.py serve)
+    # if len(sys.argv) > 1 and sys.argv[1] == "serve":
+    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # else:
+    #     main()

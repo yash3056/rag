@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Notebook</title>
+  <!-- (Optional) Google Font for a nicer look -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap">
+
+  <!-- Add Markdown parsing library -->
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+  <!-- Add Material Icons -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
+
+  <style>
+    /* Reset & Basic Defaults */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif, Arial, sans-serif;
+      background-color: #1e1e1e;
+      color: #f2f2f2;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      padding: 0.5rem;
+    }
+
+    .container {
+      display: flex;
+      width: 100%;
+      height: calc(100vh - 95px); /* Adjusted to account for header + margins */
+      margin: 0;
+      gap: 0.5rem;
+      overflow: hidden; /* Prevent page-level scrolling */
+    }
+
+    /************************************
+     * Panel Base Style
+     ************************************/
+    .panel {
+      border: 2px dashed #3a3a3a;
+      border-radius: 8px;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      height: 100%; /* Use full container height */
+      overflow: hidden; /* Prevent panel overflow */
+    }
+
+    /************************************
+     * Left Panel (Sources)
+     ************************************/
+    .left-panel {
+      width: 300px;
+      max-width: 320px;
+      background-color: #12171f; /* Changed to bluish-black */
+    }
+
+    .left-panel h2 {
+      font-size: 1.2rem;
+      margin-bottom: 0.8rem;
+    }
+
+    .add-source-btn {
+      background-color: #444444;
+      border: none;
+      color: #f2f2f2;
+      padding: 0.6rem 1rem;
+      margin-bottom: 1rem;
+      cursor: pointer;
+      font-size: 0.95rem;
+      border-radius: 4px;
+    }
+
+    .add-source-btn:hover {
+      background-color: #555555;
+    }
+
+    .sources-instructions {
+      font-size: 0.9rem;
+      line-height: 1.4rem;
+      color: #cccccc;
+      margin-bottom: 1rem; /* Reduced margin */
+    }
+
+    .saved-sources {
+      display: flex;
+      flex-direction: column;
+      flex: 1; /* Take all available space */
+      overflow: hidden; /* Prevent overflow */
+      margin-top: 0; /* Remove margin */
+    }
+
+    .saved-sources h3 {
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .source-list {
+      list-style: none;
+      padding-left: 0;
+      overflow-y: auto; /* Enable vertical scrolling */
+      flex: 1; /* Take all available space */
+      margin-bottom: 0;
+      max-height: none; /* Remove max height limitation */
+    }
+
+    .source-list::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .source-list::-webkit-scrollbar-track {
+      background: #12171f;
+      border-radius: 4px;
+    }
+
+    .source-list::-webkit-scrollbar-thumb {
+      background: #555;
+      border-radius: 4px;
+    }
+
+    .source-list::-webkit-scrollbar-thumb:hover {
+      background: #777;
+    }
+
+    .source-list li {
+      background-color: #1a2331; /* Changed to bluish-black */
+      padding: 0.4rem;
+      margin-bottom: 0.5rem;
+      border-radius: 4px;
+      font-size: 0.9rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .delete-btn {
+      background: none;
+      border: none;
+      color: #ff4444;
+      cursor: pointer;
+      padding: 4px;
+      opacity: 0.7;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: opacity 0.2s;
+    }
+    
+    .delete-btn .material-icons {
+      font-size: 18px; /* Smaller size to fit nicely in the list item */
+    }
+    
+    .delete-btn:hover {
+      opacity: 1;
+    }
+
+    /************************************
+     * Right Panel (Chat)
+     ************************************/
+    .right-panel {
+      flex: 1;
+      background-color: #12171f; /* Changed to bluish-black */
+      display: flex;
+      flex-direction: column;
+    }
+
+    .right-panel h2 {
+      font-size: 1.2rem;
+      margin-bottom: 0.8rem;
+    }
+
+    /* The main chat container (holds messages & input) */
+    .chat-container {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      margin-bottom: 0.5rem; /* Reduced margin */
+      border: 2px dashed #444444;
+      border-radius: 8px;
+      padding: 1rem;
+      overflow: hidden; /* Important: prevent container overflow */
+    }
+
+    /* The scrollable area where chat messages appear */
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto; /* This enables vertical scrolling */
+      overflow-x: hidden; /* Prevent horizontal scrolling */
+      margin-bottom: 0.8rem;
+      padding-right: 0.5rem; /* space for scrollbar */
+      min-height: 300px; /* Ensure minimum height for scrolling */
+    }
+
+    .message {
+      background-color: #1a2331; /* Changed to bluish-black */
+      padding: 0.6rem;
+      margin-bottom: 0.5rem;
+      border-radius: 4px;
+      max-width: 80%;
+      font-size: 0.9rem;
+      line-height: 1.3rem;
+      word-wrap: break-word;
+    }
+
+    /* Align user messages to the right if you like, or keep them all on the left */
+    .message.user {
+      margin-left: auto;
+      background-color: #1e2a3a; /* Changed to bluish-black */
+    }
+
+    /* The input area for new messages */
+    .chat-input {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .chat-input textarea {
+      flex: 1;
+      padding: 0.6rem;
+      border-radius: 4px;
+      border: 1px solid #555555;
+      background-color: #1e1e1e;
+      color: #f2f2f2;
+      font-family: inherit;
+      font-size: 0.9rem;
+      line-height: 1.2;
+      overflow-y: auto;
+      min-height: 40px;
+      max-height: 120px;
+    }
+
+    .chat-input textarea::placeholder {
+      color: #aaaaaa;
+    }
+
+    .send-btn {
+      background-color: #444444;
+      border: none;
+      color: #f2f2f2;
+      padding: 0.6rem 1rem;
+      cursor: pointer;
+      font-size: 0.9rem;
+      border-radius: 4px;
+    }
+
+    .send-btn:hover {
+      background-color: #555555;
+    }
+
+    /* Responsive: stack panels vertically on narrow screens */
+    @media (max-width: 768px) {
+      .container {
+        flex-direction: column;
+      }
+      .left-panel {
+        width: 100%;
+        margin-bottom: 0.5rem;
+      }
+      .right-panel {
+        width: 100%;
+      }
+    }
+
+    /* Add styling for sources in chat messages */
+    .message .sources {
+      margin-top: 0.5rem;
+      font-size: 0.8rem;
+      color: #888888;
+    }
+
+    .message.assistant {
+      background-color: #1b2a36; /* Changed to bluish-black with teal hint */
+    }
+
+    /* Preserve whitespace in messages */
+    .message .message-text {
+      white-space: pre-wrap;  /* This preserves whitespace and wraps text */
+      word-break: break-word;
+    }
+
+    /* Add styling for markdown content */
+    .markdown-content {
+      line-height: 1.5;
+    }
+    
+    .markdown-content p {
+      margin-bottom: 1rem;
+    }
+    
+    .markdown-content h1, 
+    .markdown-content h2, 
+    .markdown-content h3, 
+    .markdown-content h4 {
+      margin-top: 1rem;
+      margin-bottom: 0.5rem;
+      font-weight: bold;
+    }
+    
+    .markdown-content code {
+      background-color: #2a2a2a;
+      padding: 0.2em 0.4em;
+      border-radius: 3px;
+      font-family: monospace;
+    }
+    
+    .markdown-content pre {
+      background-color: #2a2a2a;
+      padding: 1rem;
+      border-radius: 4px;
+      overflow-x: auto;
+      max-width: 100%;
+      margin: 1rem 0;
+    }
+    
+    .markdown-content pre code {
+      background-color: transparent;
+      padding: 0;
+    }
+    
+    .markdown-content ul, 
+    .markdown-content ol {
+      margin-left: 2rem;
+      margin-bottom: 1rem;
+    }
+    
+    .markdown-content blockquote {
+      border-left: 3px solid #555555;
+      padding-left: 1rem;
+      margin-left: 0;
+      margin-right: 0;
+      font-style: italic;
+    }
+    
+    .markdown-content table {
+      border-collapse: collapse;
+      margin-bottom: 1rem;
+      width: 100%;
+    }
+    
+    .markdown-content th, 
+    .markdown-content td {
+      border: 1px solid #555555;
+      padding: 0.5rem;
+    }
+    
+    .markdown-content a {
+      color: #61dafb;
+      text-decoration: none;
+    }
+    
+    .markdown-content a:hover {
+      text-decoration: underline;
+    }
+    
+    /* Style scrollbars for better visibility */
+    .chat-messages::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    .chat-messages::-webkit-scrollbar-track {
+      background: #12171f; /* Changed to match background */
+      border-radius: 4px;
+    }
+    
+    .chat-messages::-webkit-scrollbar-thumb {
+      background: #555;
+      border-radius: 4px;
+    }
+    
+    .chat-messages::-webkit-scrollbar-thumb:hover {
+      background: #777;
+    }
+
+    /* Title/Header styling */
+    .header {
+      text-align: left; /* Changed from center to left */
+      padding: 1rem;    /* Added horizontal padding for better spacing */
+      background-color: #0d131b;
+      margin-bottom: 0.5rem;
+      border-radius: 8px;
+      width: 100%;
+    }
+    
+    .header h1 {
+      font-size: 1.8rem;
+      font-weight: 600;
+      color: #f2f2f2;
+      letter-spacing: 1px;
+      margin-left: 0.5rem; /* Added left margin for better positioning */
+    }
+
+    /* Structure left panel content with flex */
+    .left-panel-content {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+    }
+    
+    .sources-top {
+      flex: 0 0 auto; /* Don't grow or shrink */
+    }
+    
+    .sources-bottom {
+      flex: 1; /* Take remaining space */
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 0; /* Important for nested flexbox scrolling */
+    }
+  </style>
+</head>
+<body>
+<!-- Add header before container -->
+<div class="header">
+  <h1>AI Notebook</h1>
+</div>
+
+<div class="container">
+  <!-- Left Panel: Sources -->
+  <div class="left-panel panel" id="leftPanel">
+    <div class="left-panel-content">
+      <div class="sources-top">
+        <h2>Sources</h2>
+        <!-- Update button to trigger file explorer -->
+        <button class="add-source-btn" onclick="openFileExplorer()">+ Add source</button>
+        <input type="file" id="fileInput" style="display: none;" onchange="uploadFile(this.files)" />
+        <p class="sources-instructions">
+          Saved sources will appear here. Drag and drop a file here or click “+ Add source” to add PDFs, websites,
+          text, videos, or audio files.
+        </p>
+      </div>
+      
+      <div class="sources-bottom">
+        <div class="saved-sources">
+          <h3>Saved Sources:</h3>
+          <ul id="sourceList" class="source-list">
+            <!-- Dynamically added sources will appear here -->
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Panel: Chat -->
+  <div class="right-panel panel">
+    <h2>Chat</h2>
+    <!-- Chat area (messages + input) -->
+    <div class="chat-container">
+      <div id="chatMessages" class="chat-messages">
+        <!-- Chat messages go here -->
+      </div>
+      <div class="chat-input">
+        <textarea
+          id="chatInput"
+          placeholder="Type your message... (Shift+Enter for new line)"
+          rows="1"
+          style="resize: none;"
+          onkeydown="handleKeyDown(event)"
+        ></textarea>
+        <button class="send-btn" onclick="sendMessage()">Send</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  /********************************************
+   * Data Structures
+   ********************************************/
+  const sources = [];
+  const chatMessages = [];
+
+  // Fetch the list of sources when the page loads
+  document.addEventListener("DOMContentLoaded", function() {
+    fetchSourcesList();
+  });
+
+  // Function to fetch the list of sources from the server
+  function fetchSourcesList() {
+    fetch("http://localhost:8000/list_sources")
+      .then(response => response.json())
+      .then(data => {
+        // Clear existing sources
+        sources.length = 0;
+        
+        // Add fetched sources to our array
+        data.sources.forEach(source => {
+          sources.push(source.filename);
+        });
+        
+        // Update the UI
+        updateSourceList();
+      })
+      .catch(error => {
+        console.error("Error fetching sources list:", error);
+      });
+  }
+
+  /********************************************
+   * Sources Logic
+   ********************************************/
+  function updateSourceList() {
+    const sourceListEl = document.getElementById("sourceList");
+    sourceListEl.innerHTML = "";
+
+    sources.forEach((src) => {
+      const li = document.createElement("li");
+      
+      // Add filename
+      const filename = document.createElement("span");
+      filename.textContent = src;
+      li.appendChild(filename);
+      
+      // Add delete button with Material Icon
+      const deleteBtn = document.createElement("button");
+      deleteBtn.className = "delete-btn";
+      deleteBtn.setAttribute("title", "Delete this file");
+      deleteBtn.innerHTML = '<i class="material-icons">delete</i>';
+      deleteBtn.onclick = () => deleteSource(src);
+      li.appendChild(deleteBtn);
+      
+      sourceListEl.appendChild(li);
+    });
+  }
+
+  function deleteSource(filename) {
+    if (confirm(`Are you sure you want to delete ${filename}?`)) {
+      fetch(`http://localhost:8000/delete_source/${encodeURIComponent(filename)}`, {
+        method: 'DELETE'
+      })
+      .then(response => {
+        // Check if the response is ok before parsing JSON
+        if (!response.ok) {
+          if (response.status === 404) {
+            // File not found (possibly already deleted)
+            alert(`File '${filename}' not found. Refreshing source list...`);
+            fetchSourcesList(); // Refresh anyway
+            return null;
+          }
+          // For other errors, get the error message from the response
+          return response.json().then(data => {
+            throw new Error(data.detail || 'Server error');
+          });
+        }
+        return response.json();
+      })
+      .then(data => {
+        if (data) {
+          // Only show success message if we got valid data
+          alert(data.message);
+          fetchSourcesList(); // Refresh the list
+        }
+      })
+      .catch(error => {
+        console.error("Error deleting source:", error);
+        alert(`Error: ${error.message}`);
+        
+        // Check if file exists on the client side list and remove it if needed
+        const fileIndex = sources.indexOf(filename);
+        if (fileIndex !== -1) {
+          // Check with the server if file still exists
+          verifyFileExists(filename);
+        }
+      });
+    }
+  }
+
+  // New function to verify file existence
+  function verifyFileExists(filename) {
+    fetch("http://localhost:8000/check_file", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filename: filename })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (!data.exists) {
+        alert(`File '${filename}' is no longer on the server. Refreshing source list...`);
+        fetchSourcesList();
+      }
+    })
+    .catch(error => {
+      console.error("Error checking file:", error);
+    });
+  }
+
+  function openFileExplorer() {
+    document.getElementById("fileInput").click();
+  }
+
+  function uploadFile(files) {
+    if (files.length === 0) return;
+    const file = files[0];
+    const formData = new FormData();
+    formData.append("file", file);
+    
+    // Show upload in progress
+    alert("Uploading file... Please wait. Large files may take some time.");
+    
+    // Keep track of the filename for verification later
+    const filename = file.name;
+    
+    fetch("http://localhost:8000/upload_source", {
+      method: "POST",
+      body: formData,
+      // Increase timeout for large files
+      timeout: 60000 // 1 minute timeout (not standard but illustrative)
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      return response.json();
+    })
+    .then(data => {
+      alert(data.message);
+      // Refresh the sources list instead of just adding one file
+      fetchSourcesList();
+    })
+    .catch(error => {
+      console.error("Error uploading file:", error);
+      
+      // If fetch failed but the file may have been uploaded, verify with the server
+      setTimeout(() => {
+        verifyFileUpload(filename);
+      }, 2000);
+    });
+  }
+  
+  // New function to verify if file was actually uploaded despite fetch error
+  function verifyFileUpload(filename) {
+    fetch("http://localhost:8000/check_file", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ filename: filename })
+    })
+    .then(response => response.json())
+    .then(data => {
+      if (data.exists) {
+        alert(`File '${filename}' was successfully uploaded despite connection issues.`);
+        // Refresh the sources list instead of just adding one file
+        fetchSourcesList();
+      } else {
+        alert(`Failed to upload file: Connection issue. Please try again.`);
+      }
+    })
+    .catch(error => {
+      alert("Failed to verify file upload status. Check the server logs.");
+    });
+  }
+
+  // Enable drag and drop on the left panel
+  const leftPanel = document.getElementById("leftPanel");
+  leftPanel.addEventListener("dragover", function(e) {
+    e.preventDefault();
+    leftPanel.style.borderColor = "#5a5a5a";
+  });
+  leftPanel.addEventListener("dragleave", function(e) {
+    e.preventDefault();
+    leftPanel.style.borderColor = "";
+  });
+  leftPanel.addEventListener("drop", function(e) {
+    e.preventDefault();
+    leftPanel.style.borderColor = "";
+    if (e.dataTransfer.files.length > 0) {
+      uploadFile(e.dataTransfer.files);
+    }
+  });
+
+  /********************************************
+   * Chat Logic
+   ********************************************/
+  function sendMessage() {
+    const chatInput = document.getElementById("chatInput");
+    const messageText = chatInput.value.trim();
+    if (messageText !== "") {
+      // Add user message to chat
+      chatMessages.push({ text: messageText, sender: "user" });
+      renderChatMessages();
+      chatInput.value = "";
+
+      // Send query to model
+      fetch("http://localhost:8000/ask", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ query: messageText })
+      })
+      .then(response => response.json())
+      .then(data => {
+        // Add model's response to chat
+        chatMessages.push({ 
+          text: data.answer, 
+          sender: "assistant",
+          sources: data.sources 
+        });
+        renderChatMessages();
+      })
+      .catch(error => {
+        console.error("Error getting response:", error);
+        chatMessages.push({ 
+          text: "Sorry, I encountered an error processing your request.", 
+          sender: "assistant" 
+        });
+        renderChatMessages();
+      });
+    }
+  }
+
+  function renderChatMessages() {
+    const chatMessagesEl = document.getElementById("chatMessages");
+    chatMessagesEl.innerHTML = "";
+
+    chatMessages.forEach((msg) => {
+      const msgDiv = document.createElement("div");
+      msgDiv.classList.add("message");
+      if (msg.sender === "user") {
+        msgDiv.classList.add("user");
+      } else if (msg.sender === "assistant") {
+        msgDiv.classList.add("assistant");
+      }
+      
+      // Add message text with markdown rendering
+      const textDiv = document.createElement("div");
+      textDiv.className = "message-text markdown-content";
+      
+      // Use the marked library to render markdown
+      marked.setOptions({
+        breaks: true,  // Convert line breaks to <br>
+        gfm: true,     // Enable GitHub Flavored Markdown
+        headerIds: false, // Don't add IDs to headings (avoid conflicts)
+        sanitize: false   // Allow HTML tags in markdown
+      });
+      
+      try {
+        textDiv.innerHTML = marked.parse(msg.text);
+      } catch (e) {
+        // Fallback to plain text if markdown parsing fails
+        textDiv.textContent = msg.text;
+        console.error("Markdown parsing error:", e);
+      }
+      
+      msgDiv.appendChild(textDiv);
+      
+      // Add sources if available (for assistant messages)
+      if (msg.sources && msg.sender === "assistant") {
+        const sourcesDiv = document.createElement("div");
+        sourcesDiv.className = "sources";
+        sourcesDiv.innerHTML = "<br><small>Sources:</small>";
+        msg.sources.forEach((source, index) => {
+          const relevance = 1.0/(source.distance + 0.01);
+          sourcesDiv.innerHTML += `<br><small>${index + 1}. ${source.metadata.filename} (Relevance: ${relevance.toFixed(2)})</small>`;
+        });
+        msgDiv.appendChild(sourcesDiv);
+      }
+      
+      chatMessagesEl.appendChild(msgDiv);
+    });
+
+    // Auto-scroll to bottom
+    chatMessagesEl.scrollTop = chatMessagesEl.scrollHeight;
+  }
+
+  function handleKeyDown(event) {
+    const textarea = event.target;
+    if (event.key === 'Enter') {
+      if (event.shiftKey) {
+        // Let the newline be added naturally
+        return;
+      }
+      event.preventDefault();
+      sendMessage();
+    }
+    
+    // Auto-adjust height
+    setTimeout(() => {
+      textarea.style.height = 'auto';
+      textarea.style.height = textarea.scrollHeight + 'px';
+    }, 0);
+  }
+</script>
+
+</body>
+</html>

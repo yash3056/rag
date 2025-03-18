@@ -25,8 +25,17 @@ def generate_response(prompt, context=None, model_name="gemma3"):
         },
     )
     
-    # Return the response content 
-    return stream_response['message']['content']
+    # Get the response content
+    response_text = stream_response['message']['content']
+    
+    # Remove any text within <think> </think> tags
+    while '<think>' in response_text and '</think>' in response_text:
+        think_start = response_text.find('<think>')
+        think_end = response_text.find('</think>') + len('</think>')
+        if think_start >= 0 and think_end > 0:
+            response_text = response_text[:think_start] + response_text[think_end:]
+    
+    return response_text
 
 def process_query_with_context(query, search_results, model_name="gemma3"):
     """Process a query using retrieved document chunks as context"""
