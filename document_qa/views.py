@@ -219,7 +219,17 @@ def summarize_document(request):
         # Generate the summary
         summary = qa_system.summarize_document(filename)
         
-        return JsonResponse({"summary": summary, "filename": filename})
+        # Check if the summary begins with "Summary of" or similar text
+        lines = summary.split('\n')
+        cleaned_summary = summary
+        
+        # Check for common header patterns in the first 2 lines and remove them if found
+        if len(lines) > 1:
+            # Check if first line contains the filename or "Summary of"
+            if ("Summary of" in lines[0] and filename in lines[0]) or lines[0].strip() == '':
+                cleaned_summary = '\n'.join(lines[1:]).strip()
+        
+        return JsonResponse({"summary": cleaned_summary, "filename": filename})
     except FileNotFoundError as e:
         return JsonResponse({"error": str(e)}, status=404)
     except Exception as e:

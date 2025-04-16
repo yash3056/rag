@@ -116,7 +116,44 @@ def summarize_document(document_text):
     # Create the prompt for summarization
     prompt = "Please create a detailed summary of the following document"
     
-    return generate_response(prompt, document_text)
+    # Get the full response from the model
+    full_response = generate_response(prompt, document_text)
+    
+    # Extract only the summary part
+    # Look for markers that indicate the start of the summary
+    summary_markers = ["Summary:", "summary:", "SUMMARY:", "Here's a summary:", "Here is a summary:"]
+    
+    # Find the earliest marker that exists in the response
+    summary_start = -1
+    for marker in summary_markers:
+        pos = full_response.find(marker)
+        if pos >= 0:
+            if summary_start == -1 or pos < summary_start:
+                summary_start = pos
+    
+    # If we found a summary marker, extract the text after it
+    if summary_start >= 0:
+        # Find the marker that matched
+        matched_marker = None
+        for marker in summary_markers:
+            if full_response[summary_start:summary_start+len(marker)] == marker:
+                matched_marker = marker
+                break
+        
+        if matched_marker:
+            # Extract everything after the marker
+            summary = full_response[summary_start + len(matched_marker):].strip()
+            return summary
+    
+    # If no marker is found or extraction fails, return the original response
+    # but truncate any obvious input document parts
+    if "Task: Please create a detailed summary of the following document" in full_response:
+        parts = full_response.split("Task: Please create a detailed summary of the following document")
+        if len(parts) > 1:
+            # Return everything after the task prompt
+            return parts[-1].strip()
+    
+    return full_response
 
 # Functions for advanced document summarization
 def chunk_text_for_summary(text, chunk_size=4000, overlap=20):
