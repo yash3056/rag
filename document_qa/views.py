@@ -20,43 +20,22 @@ from .document_qa import (
 # Import model-specific functionality
 from model import generate_response, load_model, process_query_with_context
 
-# Helper to load projects from file for compatibility
-def load_projects_from_file():
-    try:
-        projects_file = os.path.join(settings.BASE_DIR, settings.PROJECTS_FILE)
-        if os.path.exists(projects_file):
-            with open(projects_file, 'r') as f:
-                return json.load(f)
-        return []
-    except Exception as e:
-        print(f"Error loading projects from file: {e}")
-        return []
-
-# Helper to save projects to file for compatibility
-def save_projects_to_file(projects_data):
-    try:
-        projects_file = os.path.join(settings.BASE_DIR, settings.PROJECTS_FILE)
-        with open(projects_file, 'w') as f:
-            json.dump(projects_data, f, indent=2)
-    except Exception as e:
-        print(f"Error saving projects to file: {e}")
-
 # API Views for Projects
 @require_http_methods(["GET"])
 def get_projects(request):
     """Get all projects"""
-    # For now, we'll continue using the file-based approach for compatibility
-    projects = load_projects_from_file()
+    # Use Django ORM instead of file-based approach
+    projects = [project.to_dict() for project in Project.objects.all().order_by('-updated_at')]
     return JsonResponse(projects, safe=False)
 
 @require_http_methods(["GET"])
 def get_project(request, project_id):
     """Get a specific project by ID"""
-    projects = load_projects_from_file()
-    for project in projects:
-        if project["id"] == project_id:
-            return JsonResponse(project)
-    return JsonResponse({"error": "Project not found"}, status=404)
+    try:
+        project = Project.objects.get(id=project_id)
+        return JsonResponse(project.to_dict())
+    except Project.DoesNotExist:
+        return JsonResponse({"error": "Project not found"}, status=404)
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -64,38 +43,21 @@ def create_project(request):
     """Create a new project"""
     try:
         data = json.loads(request.body)
-        current_time = datetime.now().isoformat()
         project_id = str(uuid.uuid4())
         
         # Create project folder structure
         project_folder = get_project_folder(project_id)
         document_folder = get_project_document_folder(project_id)
         
-        new_project = {
-            "id": project_id,
-            "title": data.get("title", ""),
-            "description": data.get("description", ""),
-            "created_at": current_time,
-            "updated_at": current_time,
-            "sources_count": 0
-        }
-        
-        # Add to projects file
-        projects = load_projects_from_file()
-        projects.append(new_project)
-        save_projects_to_file(projects)
-        
-        # Also save to database (future-proofing)
-        Project.objects.create(
+        # Create project in database
+        project = Project.objects.create(
             id=uuid.UUID(project_id),
             title=data.get("title", ""),
             description=data.get("description", ""),
-            created_at=datetime.now(),
-            updated_at=datetime.now(),
             sources_count=0
         )
         
-        return JsonResponse(new_project)
+        return JsonResponse(project.to_dict())
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
 
@@ -112,31 +74,13 @@ def update_project(request, project_id):
         
         new_title = data["title"].strip()
         
-        # Update in file
-        projects = load_projects_from_file()
-        updated = False
-        for project in projects:
-            if project["id"] == project_id:
-                project["title"] = new_title
-                project["updated_at"] = datetime.now().isoformat()
-                updated = True
-                updated_project = project
-                break
-        
-        if not updated:
-            return JsonResponse({"error": "Project not found"}, status=404)
-        
-        save_projects_to_file(projects)
-        
-        # Also update in database (future-proofing)
         try:
-            db_project = Project.objects.get(id=project_id)
-            db_project.title = new_title
-            db_project.save()
+            project = Project.objects.get(id=project_id)
+            project.title = new_title
+            project.save()
+            return JsonResponse(project.to_dict())
         except Project.DoesNotExist:
-            pass  # Not critical for now
-        
-        return JsonResponse(updated_project)
+            return JsonResponse({"error": "Project not found"}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
 
@@ -145,41 +89,27 @@ def update_project(request, project_id):
 def delete_project(request, project_id):
     """Delete a project"""
     try:
-        # Remove from file
-        projects = load_projects_from_file()
-        project_to_delete = None
-        project_index = None
-        
-        for i, project in enumerate(projects):
-            if project["id"] == project_id:
-                project_to_delete = project
-                project_index = i
-                break
-                
-        if project_index is None:
-            return JsonResponse({"error": "Project not found"}, status=404)
-        
-        deleted_project = projects.pop(project_index)
-        save_projects_to_file(projects)
-        
-        # Remove project folder if it exists
-        project_folder = get_project_folder(project_id)
-        if os.path.exists(project_folder):
-            import shutil
-            shutil.rmtree(project_folder)
-        
-        # Delete from database (future-proofing)
         try:
-            Project.objects.filter(id=project_id).delete()
-        except Exception:
-            pass  # Not critical for now
-        
-        # Remove document QA instance if exists
-        from .document_qa import document_qa_instances
-        if project_id in document_qa_instances:
-            del document_qa_instances[project_id]
-        
-        return JsonResponse({"message": f"Project '{deleted_project['title']}' deleted successfully"})
+            project = Project.objects.get(id=project_id)
+            project_title = project.title
+            
+            # Remove project folder if it exists
+            project_folder = get_project_folder(project_id)
+            if os.path.exists(project_folder):
+                import shutil
+                shutil.rmtree(project_folder)
+            
+            # Delete from database
+            project.delete()
+            
+            # Remove document QA instance if exists
+            from .document_qa import document_qa_instances
+            if project_id in document_qa_instances:
+                del document_qa_instances[project_id]
+            
+            return JsonResponse({"message": f"Project '{project_title}' deleted successfully"})
+        except Project.DoesNotExist:
+            return JsonResponse({"error": "Project not found"}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
@@ -277,23 +207,31 @@ def upload_source(request, project_id):
         
         print(f"File successfully saved to {os.path.join(document_folder, filename)}")
         
-        # Update the source count for this project
-        projects = load_projects_from_file()
-        for project in projects:
-            if project["id"] == project_id:
-                sources_count = count_project_sources(project_id)
-                project["sources_count"] = sources_count
-                project["updated_at"] = datetime.now().isoformat()
-                save_projects_to_file(projects)
-                break
-                
-        # Also update in database (future-proofing)
         try:
-            db_project = Project.objects.get(id=project_id)
-            db_project.sources_count = count_project_sources(project_id)
-            db_project.save()
+            # Update project in database
+            project = Project.objects.get(id=project_id)
+            project.sources_count = count_project_sources(project_id)
+            project.save()
+            
+            # Add source to database
+            file_path = os.path.join(document_folder, filename)
+            file_size = os.path.getsize(file_path)
+            
+            # Check if source already exists
+            source, created = Source.objects.get_or_create(
+                project_id=project_id,
+                filename=filename,
+                defaults={
+                    'size': file_size
+                }
+            )
+            
+            if not created:
+                # Update existing source
+                source.size = file_size
+                source.save()
         except Project.DoesNotExist:
-            pass  # Not critical for now
+            return JsonResponse({"error": "Project not found"}, status=404)
         
         return JsonResponse({"message": f"File '{filename}' uploaded successfully."})
     except Exception as e:
@@ -315,18 +253,29 @@ def rebuild_document_index(request, project_id):
 def list_sources(request, project_id):
     """List all sources in a project"""
     try:
-        document_folder = get_project_document_folder(project_id)
+        # First check if we have sources in the database
+        db_sources = Source.objects.filter(project_id=project_id)
         
-        sources = []
-        for filename in os.listdir(document_folder):
-            if filename.lower().endswith(".pdf"):
-                file_path = os.path.join(document_folder, filename)
-                file_size = os.path.getsize(file_path)
-                sources.append({
-                    "filename": filename,
-                    "size": file_size,
-                    "date_added": os.path.getctime(file_path)
-                })
+        if db_sources.exists():
+            sources = [source.to_dict() for source in db_sources]
+        else:
+            # Fallback to file system if no sources in database
+            document_folder = get_project_document_folder(project_id)
+            
+            sources = []
+            for filename in os.listdir(document_folder):
+                if filename.lower().endswith(".pdf"):
+                    file_path = os.path.join(document_folder, filename)
+                    file_size = os.path.getsize(file_path)
+                    
+                    # Create source in database
+                    source = Source.objects.create(
+                        project_id=project_id,
+                        filename=filename,
+                        size=file_size
+                    )
+                    
+                    sources.append(source.to_dict())
         
         return JsonResponse({"sources": sources})
     except Exception as e:
@@ -346,23 +295,16 @@ def delete_source(request, project_id, filename):
             # Reinitialize document system for this project
             result = rebuild_index(project_id)
             
-            # Update the source count for this project
-            projects = load_projects_from_file()
-            for project in projects:
-                if project["id"] == project_id:
-                    sources_count = count_project_sources(project_id)
-                    project["sources_count"] = sources_count
-                    project["updated_at"] = datetime.now().isoformat()
-                    save_projects_to_file(projects)
-                    break
-                    
-            # Also update in database (future-proofing)
             try:
-                db_project = Project.objects.get(id=project_id)
-                db_project.sources_count = count_project_sources(project_id)
-                db_project.save()
+                # Update project in database
+                project = Project.objects.get(id=project_id)
+                project.sources_count = count_project_sources(project_id)
+                project.save()
+                
+                # Remove source from database
+                Source.objects.filter(project_id=project_id, filename=filename).delete()
             except Project.DoesNotExist:
-                pass  # Not critical for now
+                pass
             
             return JsonResponse({"message": f"File '{filename}' deleted and index updated."})
         else:
