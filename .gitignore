@@ -1,0 +1,23 @@
+# Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Document folder (contains PDF files)
+document/
+
+# OpenVino export notebook
+openvino export.ipynb
+
+# Virtual environments
+venv/
+env/
+ENV/
+
+# Model files and indexes
+*.faiss
+*.pkl
+
+# OS specific files
+.DS_Store
+Thumbs.db
