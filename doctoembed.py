@@ -7,14 +7,31 @@ import pickle
 
 # Step 1: Extract text from PDFs
 def extract_text_from_pdf(pdf_path):
+    """Extract text from a PDF file with enhanced error handling"""
     text = ""
-    with open(pdf_path, "rb") as file:
-        reader = PyPDF2.PdfReader(file)
-        for page in reader.pages:
-            page_text = page.extract_text()
-            if page_text:
-                text += page_text + "\n"
-    return text
+    try:
+        with open(pdf_path, "rb") as file:
+            reader = PyPDF2.PdfReader(file)
+            if len(reader.pages) == 0:
+                print(f"Warning: PDF has no pages: {pdf_path}")
+                return ""
+                
+            for page in reader.pages:
+                page_text = page.extract_text()
+                if page_text:
+                    text += page_text + "\n"
+            
+            # Log the first 100 chars for debugging
+            preview = text[:100].replace('\n', ' ') if text else "No text extracted!"
+            print(f"Extracted {len(text)} characters from {pdf_path}: {preview}...")
+            
+            if not text.strip():
+                print(f"Warning: Extracted text is empty for {pdf_path}")
+            
+            return text
+    except Exception as e:
+        print(f"Error extracting text from PDF {pdf_path}: {str(e)}")
+        return ""
 
 def chunk_text(text, chunk_size=500, overlap=50):
     words = text.split()
@@ -67,6 +84,9 @@ def build_index(embeddings):
 
 def save_data(index, metadata, index_path="document_index.faiss", metadata_path="metadata.pkl"):
     """Save the index and metadata to files"""
+    # Make sure directory exists
+    os.makedirs(os.path.dirname(index_path), exist_ok=True)
+    
     faiss.write_index(index, index_path)
     with open(metadata_path, "wb") as f:
         pickle.dump(metadata, f)
@@ -95,13 +115,13 @@ def query_index(query_text, index, model, metadata, all_chunks=None, top_k=5):
     
     return results
 
-def process_all(pdf_folder="document"):
+def process_all(pdf_folder="document", index_path="document_index.faiss", metadata_path="metadata.pkl"):
     """Process documents and create searchable index"""
     documents = process_documents(pdf_folder)
     all_chunks, metadata = create_chunks(documents)
     embeddings, model = create_embeddings(all_chunks)
     index = build_index(embeddings)
-    save_data(index, metadata)
+    save_data(index, metadata, index_path, metadata_path)
     return all_chunks, metadata, index, model
 
 def main():
