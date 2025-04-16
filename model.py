@@ -1,38 +1,48 @@
 import torch
-from transformers import pipeline
+from transformers import AutoProcessor, AutoModelForImageTextToText
 import math
 
-def load_model(model_name="gemma3"):
+def load_model():
     """Load the Gemma 3 model directly using Hugging Face Transformers"""
-    if model_name == "gemma3":
-        model_id = "google/gemma-3-4b-it"
-    else:
-        model_id = model_name
+    model_id = "google/gemma-3-4b-it"
         
     print(f"Loading model {model_id}...")
     
-    # Create pipeline with bfloat16 precision for memory efficiency
-    pipe = pipeline(
-        "image-text-to-text",
-        model=model_id,
-        device="auto",
-        torch_dtype=torch.bfloat16
+    # Determine the appropriate device
+    if torch.cuda.is_available():
+        device = "cuda"
+    else:
+        device = "cpu"
+    
+    print(f"Using device: {device}")
+    
+    # Load model and processor directly instead of using pipeline
+    processor = AutoProcessor.from_pretrained(model_id)
+    
+    # When loading model, use device_map="auto" instead of the specific device
+    # This lets HF Transformers handle device mapping automatically
+    model = AutoModelForImageTextToText.from_pretrained(
+        model_id,
+        torch_dtype=torch.bfloat16,
+        device_map="auto"
     )
     
-    return pipe
+    return {"model": model, "processor": processor, "device": device}
 
 # Lazy loading of model as a module-level variable
-_model_cache = {}
+_model_cache = None
 
-def generate_response(prompt, context=None, model_name="gemma3"):
+def generate_response(prompt, context=None):
     """Generate a response using the model with the given prompt and optional context"""
     global _model_cache
     
     # Lazy-load the model on first use
-    if model_name not in _model_cache:
-        _model_cache[model_name] = load_model(model_name)
+    if _model_cache is None:
+        _model_cache = load_model()
     
-    pipe = _model_cache[model_name]
+    model = _model_cache["model"]
+    processor = _model_cache["processor"]
+    device = _model_cache["device"]
     
     # Create a system message that sets the context for the model
     system_message = "You are a helpful AI assistant focused on document analysis and summarization."
@@ -43,14 +53,26 @@ def generate_response(prompt, context=None, model_name="gemma3"):
     else:
         full_prompt = f"{system_message}\n\n{prompt}"
     
-    # Generate response using the pipeline
-    # For text-only use with image-text-to-text model
-    response = pipe(full_prompt, images=None)
+    # Process input using the processor
+    inputs = processor(text=full_prompt, return_tensors="pt")
     
-    if isinstance(response, list):
-        response_text = response[0]["generated_text"]
-    else:
-        response_text = response["generated_text"]
+    # Move input tensors to the appropriate device
+    for key in inputs:
+        if isinstance(inputs[key], torch.Tensor):
+            inputs[key] = inputs[key].to(device)
+    
+    # Generate response
+    with torch.no_grad():
+        output = model.generate(
+            **inputs,
+            max_new_tokens=8192,
+            do_sample=True,
+            temperature=0.7,
+            top_p=0.9
+        )
+    
+    # Decode the output
+    response_text = processor.decode(output[0], skip_special_tokens=True)
     
     # Clean up response
     response_text = response_text.strip()
@@ -63,7 +85,7 @@ def generate_response(prompt, context=None, model_name="gemma3"):
     
     return response_text.strip()
 
-def process_query_with_context(query, search_results, model_name="gemma3"):
+def process_query_with_context(query, search_results):
     """Process a query using retrieved document chunks as context"""
     if not search_results or len(search_results) == 0:
         return "No relevant information found to answer your question."
@@ -84,9 +106,9 @@ def process_query_with_context(query, search_results, model_name="gemma3"):
     # Add system prompt to the beginning of context
     context_with_prompt = f"{system_prompt}\n\n{context}"
     
-    return generate_response(query, context_with_prompt, model_name)
+    return generate_response(query, context_with_prompt)
 
-def summarize_document(document_text, model_name="gemma3"):
+def summarize_document(document_text):
     """Summarize a document using the model"""
     if not document_text or not document_text.strip():
         return "Error: No text content provided for summarization."
@@ -94,7 +116,7 @@ def summarize_document(document_text, model_name="gemma3"):
     # Create the prompt for summarization
     prompt = "Please create a detailed summary of the following document"
     
-    return generate_response(prompt, document_text, model_name)
+    return generate_response(prompt, document_text)
 
 # Functions for advanced document summarization
 def chunk_text_for_summary(text, chunk_size=4000, overlap=20):
@@ -134,7 +156,7 @@ def chunk_text_for_summary(text, chunk_size=4000, overlap=20):
     print(f"Created {len(chunks)} chunks from text")
     return chunks
 
-def summarize_chunk(chunk, model_name="gemma3"):
+def summarize_chunk(chunk):
     """Summarize a single chunk of text"""
     if not chunk or not chunk.strip():
         print("Warning: Empty chunk passed to summarization")
@@ -147,7 +169,7 @@ def summarize_chunk(chunk, model_name="gemma3"):
     print("-"*40)
     
     prompt = "Please summarize this section of text concisely and accurately"
-    summary = generate_response(prompt, chunk, model_name)
+    summary = generate_response(prompt, chunk)
     
     print("\nCHUNK SUMMARY:")
     print("-"*40)
@@ -156,13 +178,12 @@ def summarize_chunk(chunk, model_name="gemma3"):
     
     return summary
 
-def progressive_summarization(text, model_name="gemma3", max_length=8196):
+def progressive_summarization(text, max_length=8196):
     """
     Summarize a document using progressive chunking and summarization
     
     Args:
         text: The document text to summarize
-        model_name: The model to use for summarization
         max_length: Maximum approximate length to process at once
         
     Returns:
@@ -177,7 +198,7 @@ def progressive_summarization(text, model_name="gemma3", max_length=8196):
     # If text is short enough, summarize directly
     if len(text.split()) <= max_length:
         print("Text is short enough for direct summarization")
-        return summarize_document(text, model_name)
+        return summarize_document(text)
         
     # Split into overlapping chunks
     chunks = chunk_text_for_summary(text, chunk_size=max_length, overlap=20)
@@ -189,7 +210,7 @@ def progressive_summarization(text, model_name="gemma3", max_length=8196):
     # If we only have one chunk after all, summarize directly
     if len(chunks) == 1:
         print("Only one chunk created, summarizing directly")
-        return summarize_document(chunks[0], model_name)
+        return summarize_document(chunks[0])
     
     # Process each chunk to get intermediate summaries
     intermediate_summaries = []
@@ -198,7 +219,7 @@ def progressive_summarization(text, model_name="gemma3", max_length=8196):
     
     for i, chunk in enumerate(chunks):
         print(f"\nProcessing chunk {i+1}/{len(chunks)}:")
-        chunk_summary = summarize_chunk(chunk, model_name)
+        chunk_summary = summarize_chunk(chunk)
         if chunk_summary and chunk_summary.strip():
             intermediate_summaries.append(chunk_summary)
             print(f"✓ Chunk {i+1} summary added ({len(chunk_summary.split())} words)")
@@ -215,6 +236,6 @@ def progressive_summarization(text, model_name="gemma3", max_length=8196):
     
     print("\nCreating final coherent summary...")
     prompt = "Using the following section summaries, create a comprehensive and coherent summary of the entire document:"
-    final_summary = generate_response(prompt, combined_summary, model_name)
+    final_summary = generate_response(prompt, combined_summary)
     print(f"Final summary length: {len(final_summary.split())} words")
     return final_summary

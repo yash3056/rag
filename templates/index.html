@@ -1,0 +1,762 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Projects Dashboard</title>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  
+  <!-- CSS styles inline -->
+  <style>
+    /* Base Styles */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif, Arial;
+      background-color: #121212;
+      color: #f2f2f2;
+      line-height: 1.6;
+    }
+
+    /* Dashboard Container */
+    .dashboard-container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+
+    /* Header Styles */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 2rem;
+      border-bottom: 1px solid #333;
+      margin-bottom: 2rem;
+    }
+
+    header h1 {
+      font-size: 2rem;
+      font-weight: 600;
+    }
+
+    /* Button Styles */
+    .create-btn {
+      background-color: #2c7be5;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+
+    .create-btn:hover {
+      background-color: #1a68d1;
+    }
+
+    .cancel-btn {
+      background-color: transparent;
+      color: #f2f2f2;
+      border: 1px solid #555;
+      border-radius: 4px;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+    }
+
+    .cancel-btn:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .submit-btn {
+      background-color: #2c7be5;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+    }
+
+    .submit-btn:hover {
+      background-color: #1a68d1;
+    }
+
+    /* Projects Grid */
+    .projects-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      grid-gap: 1.5rem;
+    }
+
+    .loading-indicator {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 2rem;
+      color: #aaa;
+    }
+
+    /* Project Card */
+    .project-card {
+      background-color: #1e1e1e;
+      border-radius: 8px;
+      padding: 1.5rem;
+      transition: transform 0.2s, box-shadow 0.2s;
+      cursor: pointer;
+      position: relative; /* Added for dropdown positioning */
+    }
+
+    .project-card:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .project-title {
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+      color: #fff;
+      padding-right: 30px; /* Make space for the menu icon */
+    }
+
+    /* Menu styles */
+    .project-menu {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+      cursor: pointer;
+      z-index: 2;
+    }
+
+    .project-menu-btn {
+      background: none;
+      border: none;
+      color: #aaa;
+      font-size: 1.5rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      transition: color 0.2s;
+    }
+
+    .project-menu-btn:hover {
+      color: #fff;
+    }
+    
+    .dropdown-menu {
+      position: absolute;
+      top: 100%;
+      right: 0;
+      background-color: #2a2a2a;
+      border-radius: 4px;
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
+      display: none;
+      min-width: 140px;
+      z-index: 10;
+    }
+    
+    .dropdown-menu.active {
+      display: block;
+    }
+    
+    .dropdown-item {
+      padding: 0.8rem 1rem;
+      font-size: 0.9rem;
+      color: #f2f2f2;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      transition: background-color 0.2s;
+    }
+    
+    .dropdown-item:hover {
+      background-color: #3a3a3a;
+    }
+    
+    .dropdown-item.delete {
+      color: #ff4d4d;
+    }
+
+    /* Modal Styles */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 100;
+      overflow: auto;
+    }
+
+    .modal-content {
+      background-color: #1e1e1e;
+      margin: 10% auto;
+      padding: 0;
+      width: 90%;
+      max-width: 500px;
+      border-radius: 8px;
+      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid #333;
+    }
+
+    .modal-header h2 {
+      font-size: 1.5rem;
+    }
+
+    .close-modal {
+      font-size: 1.8rem;
+      cursor: pointer;
+      color: #aaa;
+    }
+
+    .close-modal:hover {
+      color: #fff;
+    }
+
+    /* Form Styles */
+    form {
+      padding: 1.5rem;
+    }
+
+    .form-group {
+      margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+    }
+
+    input[type="text"], textarea {
+      width: 100%;
+      padding: 0.75rem;
+      background-color: #2a2a2a;
+      border: 1px solid #444;
+      color: #f2f2f2;
+      border-radius: 4px;
+      font-family: inherit;
+      font-size: 1rem;
+    }
+
+    input[type="text"]:focus, textarea:focus {
+      outline: none;
+      border-color: #2c7be5;
+    }
+
+    .form-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 1rem;
+    }
+
+    /* Empty State */
+    .empty-state {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 4rem 2rem;
+      color: #aaa;
+    }
+
+    .empty-state i {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+    }
+
+    /* Responsive Adjustments */
+    @media (max-width: 768px) {
+      header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+      }
+      
+      .projects-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .modal-content {
+        margin: 20% auto;
+        width: 95%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="dashboard-container">
+    <header>
+      <h1>AI Projects</h1>
+      <button id="createProjectBtn" class="create-btn">
+        <i class="material-icons">add</i> Create New Project
+      </button>
+    </header>
+    
+    <main>
+      <div id="projectsGrid" class="projects-grid">
+        <!-- Projects will be loaded here dynamically -->
+        <div class="loading-indicator">Loading projects...</div>
+      </div>
+    </main>
+    
+    <!-- Modal for creating a new project -->
+    <div id="createProjectModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>Create New Project</h2>
+          <span class="close-modal">&times;</span>
+        </div>
+        <form id="createProjectForm">
+          <div class="form-group">
+            <label for="projectTitle">Project Title</label>
+            <input type="text" id="projectTitle" name="title" required>
+          </div>
+          <div class="form-group">
+            <label for="projectDescription">Description (Optional)</label>
+            <textarea id="projectDescription" name="description" rows="3"></textarea>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="cancel-btn" id="cancelCreateBtn">Cancel</button>
+            <button type="submit" class="submit-btn">Create Project</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Project card template -->
+  <template id="projectCardTemplate">
+    <div class="project-card">
+      <div class="project-menu">
+        <button class="project-menu-btn">⋮</button>
+        <div class="dropdown-menu">
+          <div class="dropdown-item edit-project">
+            <i class="material-icons">edit</i> Edit title
+          </div>
+          <div class="dropdown-item delete delete-project">
+            <i class="material-icons">delete</i> Delete
+          </div>
+        </div>
+      </div>
+      <h3 class="project-title"></h3>
+      <div class="project-details">
+        <div class="detail-item">
+          <i class="material-icons">calendar_today</i>
+          <span class="project-date"></span>
+        </div>
+        <div class="detail-item">
+          <i class="material-icons">description</i>
+          <span class="sources-count"></span> sources
+        </div>
+      </div>
+    </div>
+  </template>
+  
+  <!-- Modal for editing project title -->
+  <div id="editTitleModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Edit Project Title</h2>
+        <span class="close-edit-modal">&times;</span>
+      </div>
+      <form id="editTitleForm">
+        <div class="form-group">
+          <label for="editProjectTitle">Project Title</label>
+          <input type="text" id="editProjectTitle" required>
+        </div>
+        <input type="hidden" id="editProjectId">
+        <div class="form-actions">
+          <button type="button" class="cancel-btn" id="cancelEditBtn">Cancel</button>
+          <button type="submit" class="submit-btn">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+  
+  <!-- JavaScript inline -->
+  <script>
+    // Global state
+    let projects = [];
+    // Track open dropdown menus
+    let openDropdown = null;
+
+    // DOM Elements
+    const projectsGrid = document.getElementById('projectsGrid');
+    const createProjectBtn = document.getElementById('createProjectBtn');
+    const createProjectModal = document.getElementById('createProjectModal');
+    const createProjectForm = document.getElementById('createProjectForm');
+    const cancelCreateBtn = document.getElementById('cancelCreateBtn');
+    const closeModalBtn = document.querySelector('.close-modal');
+    const projectCardTemplate = document.getElementById('projectCardTemplate');
+
+    // Event Listeners
+    document.addEventListener('DOMContentLoaded', initializeDashboard);
+    createProjectBtn.addEventListener('click', openCreateProjectModal);
+    cancelCreateBtn.addEventListener('click', closeCreateProjectModal);
+    closeModalBtn.addEventListener('click', closeCreateProjectModal);
+    createProjectForm.addEventListener('submit', handleCreateProject);
+
+    /**
+     * Initialize the dashboard
+     */
+    function initializeDashboard() {
+      fetchProjects();
+      
+      // Close modal when clicking outside content
+      window.addEventListener('click', (event) => {
+        if (event.target === createProjectModal) {
+          closeCreateProjectModal();
+        }
+      });
+    }
+
+    /**
+     * Fetch projects from the API
+     */
+    function fetchProjects() {
+      projectsGrid.innerHTML = '<div class="loading-indicator">Loading projects...</div>';
+      
+      fetch('/api/projects')
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.json();
+        })
+        .then(data => {
+          projects = data;
+          renderProjects();
+        })
+        .catch(error => {
+          console.error('Error fetching projects:', error);
+          projectsGrid.innerHTML = `
+            <div class="empty-state">
+              <i class="material-icons">error</i>
+              <p>Failed to load projects. Please try again later.</p>
+            </div>
+          `;
+        });
+    }
+
+    /**
+     * Render projects in the grid
+     */
+    function renderProjects() {
+      projectsGrid.innerHTML = '';
+      
+      if (projects.length === 0) {
+        projectsGrid.innerHTML = `
+          <div class="empty-state">
+            <i class="material-icons">folder_open</i>
+            <p>No projects yet. Create your first project to get started!</p>
+          </div>
+        `;
+        return;
+      }
+      
+      projects.forEach(project => {
+        const projectCard = createProjectCard(project);
+        projectsGrid.appendChild(projectCard);
+      });
+    }
+
+    /**
+     * Create a project card from template
+     */
+    function createProjectCard(project) {
+      const template = projectCardTemplate.content.cloneNode(true);
+      
+      // Fill in project data
+      template.querySelector('.project-title').textContent = project.title;
+      
+      // Format date
+      const date = new Date(project.created_at || project.updated_at);
+      const formattedDate = date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+      template.querySelector('.project-date').textContent = formattedDate;
+      
+      // Set sources count
+      template.querySelector('.sources-count').textContent = project.sources_count || 0;
+      
+      // Add menu functionality
+      const card = template.querySelector('.project-card');
+      const menuBtn = template.querySelector('.project-menu-btn');
+      const dropdown = template.querySelector('.dropdown-menu');
+      const editOption = template.querySelector('.edit-project');
+      const deleteOption = template.querySelector('.delete-project');
+      
+      // Stop propagation when clicking the menu button
+      menuBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        toggleDropdown(dropdown);
+      });
+      
+      // Edit project option
+      editOption.addEventListener('click', function(e) {
+        e.stopPropagation();
+        openEditTitleModal(project);
+        hideAllDropdowns();
+      });
+      
+      // Delete project option
+      deleteOption.addEventListener('click', function(e) {
+        e.stopPropagation();
+        confirmDeleteProject(project);
+        hideAllDropdowns();
+      });
+      
+      // Navigate to project when clicking the card (but not the menu)
+      card.addEventListener('click', () => {
+        navigateToProject(project.id);
+      });
+      
+      return template;
+    }
+    
+    /**
+     * Toggle a dropdown menu
+     */
+    function toggleDropdown(dropdown) {
+      if (openDropdown && openDropdown !== dropdown) {
+        openDropdown.classList.remove('active');
+      }
+      
+      dropdown.classList.toggle('active');
+      openDropdown = dropdown.classList.contains('active') ? dropdown : null;
+    }
+    
+    /**
+     * Hide all dropdown menus
+     */
+    function hideAllDropdowns() {
+      document.querySelectorAll('.dropdown-menu').forEach(menu => {
+        menu.classList.remove('active');
+      });
+      openDropdown = null;
+    }
+    
+    // Close dropdowns when clicking elsewhere
+    document.addEventListener('click', function() {
+      hideAllDropdowns();
+    });
+    
+    /**
+     * Navigate to project page
+     */
+    function navigateToProject(projectId) {
+      window.location.href = `/web.html?project_id=${projectId}`;
+    }
+
+    /**
+     * Open edit title modal
+     */
+    function openEditTitleModal(project) {
+      const modal = document.getElementById('editTitleModal');
+      const titleInput = document.getElementById('editProjectTitle');
+      const projectIdInput = document.getElementById('editProjectId');
+      
+      titleInput.value = project.title;
+      projectIdInput.value = project.id;
+      
+      modal.style.display = 'block';
+    }
+    
+    /**
+     * Close edit title modal
+     */
+    function closeEditTitleModal() {
+      const modal = document.getElementById('editTitleModal');
+      modal.style.display = 'none';
+    }
+    
+    /**
+     * Confirm delete project
+     */
+    function confirmDeleteProject(project) {
+      if (confirm(`Are you sure you want to delete the project "${project.title}"?\nThis cannot be undone.`)) {
+        deleteProject(project.id);
+      }
+    }
+    
+    /**
+     * Delete a project
+     */
+    function deleteProject(projectId) {
+      fetch(`/api/projects/${projectId}`, {
+        method: 'DELETE'
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to delete project');
+        }
+        return response.json();
+      })
+      .then(() => {
+        // Remove project from local array
+        projects = projects.filter(p => p.id !== projectId);
+        renderProjects();
+      })
+      .catch(error => {
+        console.error('Error deleting project:', error);
+        alert('Failed to delete project. Please try again.');
+      });
+    }
+    
+    /**
+     * Update project title
+     */
+    function updateProjectTitle(projectId, newTitle) {
+      return fetch(`/api/projects/${projectId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ title: newTitle })
+      })
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Failed to update project');
+        }
+        return response.json();
+      })
+      .then(updatedProject => {
+        // Update project in local array
+        const index = projects.findIndex(p => p.id === projectId);
+        if (index !== -1) {
+          projects[index] = updatedProject;
+        }
+        renderProjects();
+      });
+    }
+
+    /**
+     * Open the create project modal
+     */
+    function openCreateProjectModal() {
+      createProjectModal.style.display = 'block';
+      document.getElementById('projectTitle').focus();
+    }
+
+    /**
+     * Close the create project modal
+     */
+    function closeCreateProjectModal() {
+      createProjectModal.style.display = 'none';
+      createProjectForm.reset();
+    }
+
+    /**
+     * Handle create project form submission
+     */
+    function handleCreateProject(event) {
+      event.preventDefault();
+      
+      const formData = new FormData(createProjectForm);
+      const projectData = {
+        title: formData.get('title'),
+        description: formData.get('description') || ''
+      };
+      
+      // Disable submit button and show loading state
+      const submitBtn = createProjectForm.querySelector('.submit-btn');
+      const originalBtnText = submitBtn.textContent;
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Creating...';
+      
+      fetch('/api/projects', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(projectData)
+      })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error('Network response was not ok');
+          }
+          return response.json();
+        })
+        .then(newProject => {
+          // Add new project to list and re-render
+          projects.push(newProject);
+          renderProjects();
+          
+          // Close modal
+          closeCreateProjectModal();
+          
+          // Navigate to the new project
+          navigateToProject(newProject.id);
+        })
+        .catch(error => {
+          console.error('Error creating project:', error);
+          alert('Failed to create project. Please try again.');
+        })
+        .finally(() => {
+          // Restore button state
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalBtnText;
+        });
+    }
+
+    // Initialize dashboard
+    document.addEventListener('DOMContentLoaded', function() {
+      initializeDashboard();
+      
+      // Set up edit title form
+      const editTitleForm = document.getElementById('editTitleForm');
+      const cancelEditBtn = document.getElementById('cancelEditBtn');
+      const closeEditModalBtn = document.querySelector('.close-edit-modal');
+      
+      editTitleForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const projectId = document.getElementById('editProjectId').value;
+        const newTitle = document.getElementById('editProjectTitle').value.trim();
+        
+        if (newTitle) {
+          updateProjectTitle(projectId, newTitle)
+            .then(() => {
+              closeEditTitleModal();
+            })
+            .catch(error => {
+              console.error('Error updating project title:', error);
+              alert('Failed to update project title. Please try again.');
+            });
+        }
+      });
+      
+      cancelEditBtn.addEventListener('click', closeEditTitleModal);
+      closeEditModalBtn.addEventListener('click', closeEditTitleModal);
+      
+      // Close edit modal when clicking outside
+      const editModal = document.getElementById('editTitleModal');
+      window.addEventListener('click', function(event) {
+        if (event.target === editModal) {
+          closeEditTitleModal();
+        }
+      });
+    });
+  </script>
+</body>
+</html>

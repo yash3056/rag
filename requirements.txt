@@ -11,3 +11,5 @@ starlette>=0.27.0
 python-multipart>=0.0.6
 uuid>=1.30
 accelerate>=0.24.0
+django>=5.0.1
+django-cors-headers>=4.3.1
