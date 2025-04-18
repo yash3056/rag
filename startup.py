@@ -42,7 +42,9 @@ if __name__ == "__main__":
     initialize_database()
     print("Starting Django server...")
     import webbrowser
-    webbrowser.open("http://localhost:8000")
+    import threading
+    # schedule browser opening after server startup delay without blocking server launch
+    threading.Timer(3, lambda: webbrowser.open("http://localhost:8000")).start()
     # run server in current process instead of spawning a subprocess which loops in a PyInstaller bundle
     from django.core.management import execute_from_command_line
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ai_notebook.settings")
