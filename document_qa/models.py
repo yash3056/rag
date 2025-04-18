@@ -1,10 +1,12 @@
 from django.db import models
 import uuid
 from datetime import datetime
+from django.contrib.auth.models import User
 
 class Project(models.Model):
     """Django model for projects"""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='projects', null=True)
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, default="")
     created_at = models.DateTimeField(auto_now_add=True)

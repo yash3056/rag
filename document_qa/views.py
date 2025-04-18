@@ -4,12 +4,15 @@ import uuid
 from datetime import datetime
 from pathlib import Path
 
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import JsonResponse, HttpResponse
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.core.files.storage import FileSystemStorage
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.models import User
+from django.contrib.auth.decorators import login_required
 
 from .models import Project, Source
 from .document_qa import (
@@ -20,23 +23,74 @@ from .document_qa import (
 # Import model-specific functionality
 from model import generate_response, load_model, process_query_with_context
 
+# Authentication Views
+def login_view(request):
+    """Handle user login"""
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        password = request.POST.get('password')
+        
+        user = authenticate(request, username=username, password=password)
+        if user is not None:
+            login(request, user)
+            return redirect('index')
+        else:
+            return render(request, 'auth/login.html', {'error_message': 'Invalid username or password'})
+    
+    return render(request, 'auth/login.html')
+
+def logout_view(request):
+    """Handle user logout"""
+    logout(request)
+    return redirect('login')
+
+def register_view(request):
+    """Handle user registration"""
+    if request.method == 'POST':
+        username = request.POST.get('username')
+        email = request.POST.get('email', '')
+        password1 = request.POST.get('password1')
+        password2 = request.POST.get('password2')
+        
+        # Validation
+        if password1 != password2:
+            return render(request, 'auth/register.html', 
+                          {'error_message': 'Passwords do not match'})
+        
+        # Check if user already exists
+        if User.objects.filter(username=username).exists():
+            return render(request, 'auth/register.html', 
+                          {'error_message': 'Username already exists'})
+        
+        # Create user
+        user = User.objects.create_user(username=username, email=email, password=password1)
+        login(request, user)
+        return redirect('index')
+    
+    return render(request, 'auth/register.html')
+
 # API Views for Projects
+@login_required
 @require_http_methods(["GET"])
 def get_projects(request):
-    """Get all projects"""
-    # Use Django ORM instead of file-based approach
-    projects = [project.to_dict() for project in Project.objects.all().order_by('-updated_at')]
+    """Get all projects for the current user"""
+    # Use Django ORM to get only the current user's projects
+    projects = [project.to_dict() for project in 
+                Project.objects.filter(user=request.user).order_by('-updated_at')]
     return JsonResponse(projects, safe=False)
 
+@login_required
 @require_http_methods(["GET"])
 def get_project(request, project_id):
     """Get a specific project by ID"""
     try:
-        project = Project.objects.get(id=project_id)
+        # Check that the project belongs to the current user
+        project = Project.objects.get(id=project_id, user=request.user)
         return JsonResponse(project.to_dict())
     except Project.DoesNotExist:
         return JsonResponse({"error": "Project not found"}, status=404)
 
+@login_required
 @csrf_exempt
 @require_http_methods(["POST"])
 def create_project(request):
@@ -50,9 +104,10 @@ def create_project(request):
         document_folder = get_project_document_folder(project_id)
         
         try:
-            # Create project in database
+            # Create project in database with the current user
             project = Project.objects.create(
                 id=uuid.UUID(project_id),
+                user=request.user,
                 title=data.get("title", ""),
                 description=data.get("description", ""),
                 sources_count=0
@@ -73,6 +128,7 @@ def create_project(request):
         print(error_msg)
         return JsonResponse({"error": error_msg}, status=400)
 
+@login_required
 @csrf_exempt
 @require_http_methods(["PATCH"])
 def update_project(request, project_id):
@@ -87,7 +143,8 @@ def update_project(request, project_id):
         new_title = data["title"].strip()
         
         try:
-            project = Project.objects.get(id=project_id)
+            # Ensure project belongs to current user
+            project = Project.objects.get(id=project_id, user=request.user)
             project.title = new_title
             project.save()
             return JsonResponse(project.to_dict())
@@ -96,13 +153,15 @@ def update_project(request, project_id):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=400)
 
+@login_required
 @csrf_exempt
 @require_http_methods(["DELETE"])
 def delete_project(request, project_id):
     """Delete a project"""
     try:
         try:
-            project = Project.objects.get(id=project_id)
+            # Ensure project belongs to current user
+            project = Project.objects.get(id=project_id, user=request.user)
             project_title = project.title
             
             # Remove project folder if it exists
@@ -126,6 +185,7 @@ def delete_project(request, project_id):
         return JsonResponse({"error": str(e)}, status=500)
 
 # API Views for Document QA
+@login_required
 @csrf_exempt
 @require_http_methods(["POST"])
 def ask_question(request):
@@ -138,6 +198,12 @@ def ask_question(request):
         if not query:
             return JsonResponse({"error": "Query cannot be empty"}, status=400)
         
+        # Verify project belongs to user
+        try:
+            project = Project.objects.get(id=project_id, user=request.user)
+        except Project.DoesNotExist:
+            return JsonResponse({"error": "Project not found or access denied"}, status=403)
+        
         # Get the document QA system for the specific project
         qa_system = get_document_qa(project_id)
         
@@ -146,6 +212,7 @@ def ask_question(request):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
+@login_required
 @csrf_exempt
 @require_http_methods(["POST"])
 def summarize_document(request):
@@ -154,6 +221,12 @@ def summarize_document(request):
         data = json.loads(request.body)
         project_id = data.get("project_id")
         filename = data.get("filename")
+        
+        # Verify project belongs to user
+        try:
+            project = Project.objects.get(id=project_id, user=request.user)
+        except Project.DoesNotExist:
+            return JsonResponse({"error": "Project not found or access denied"}, status=403)
         
         # Get the document QA system for the specific project
         qa_system = get_document_qa(project_id)
@@ -177,16 +250,24 @@ def summarize_document(request):
     except Exception as e:
         return JsonResponse({"error": f"Error generating summary: {str(e)}"}, status=500)
 
+@login_required
 @csrf_exempt
 @require_http_methods(["POST"])
 def reload_document_index(request, project_id):
     """Reload the document index for a project"""
     try:
+        # Verify project belongs to user
+        try:
+            project = Project.objects.get(id=project_id, user=request.user)
+        except Project.DoesNotExist:
+            return JsonResponse({"error": "Project not found or access denied"}, status=403)
+        
         result = rebuild_index(project_id)
         return JsonResponse(result)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
+@login_required
 @csrf_exempt
 @require_http_methods(["POST"])
 def check_file_exists(request, project_id):
@@ -197,6 +278,12 @@ def check_file_exists(request, project_id):
         if not filename:
             return JsonResponse({"error": "filename field missing"}, status=400)
         
+        # Verify project belongs to user
+        try:
+            project = Project.objects.get(id=project_id, user=request.user)
+        except Project.DoesNotExist:
+            return JsonResponse({"error": "Project not found or access denied"}, status=403)
+        
         document_folder = get_project_document_folder(project_id)
         file_path = os.path.join(document_folder, filename)
         
@@ -204,6 +291,7 @@ def check_file_exists(request, project_id):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
+@login_required
 @csrf_exempt
 @require_http_methods(["POST"])
 def upload_source(request, project_id):
@@ -211,6 +299,12 @@ def upload_source(request, project_id):
     try:
         if 'file' not in request.FILES:
             return JsonResponse({"error": "No file provided"}, status=400)
+        
+        # Verify project belongs to user
+        try:
+            project = Project.objects.get(id=project_id, user=request.user)
+        except Project.DoesNotExist:
+            return JsonResponse({"error": "Project not found or access denied"}, status=403)
         
         file = request.FILES['file']
         document_folder = get_project_document_folder(project_id)
@@ -221,7 +315,6 @@ def upload_source(request, project_id):
         
         try:
             # Update project in database
-            project = Project.objects.get(id=project_id)
             project.sources_count = count_project_sources(project_id)
             project.save()
             
@@ -251,20 +344,34 @@ def upload_source(request, project_id):
         print(error_message)
         return JsonResponse({"error": error_message}, status=500)
 
+@login_required
 @csrf_exempt
 @require_http_methods(["POST"])
 def rebuild_document_index(request, project_id):
     """Rebuild the document index for a project"""
     try:
+        # Verify project belongs to user
+        try:
+            project = Project.objects.get(id=project_id, user=request.user)
+        except Project.DoesNotExist:
+            return JsonResponse({"error": "Project not found or access denied"}, status=403)
+        
         result = rebuild_index(project_id)
         return JsonResponse(result)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
+@login_required
 @require_http_methods(["GET"])
 def list_sources(request, project_id):
     """List all sources in a project"""
     try:
+        # Verify project belongs to user
+        try:
+            project = Project.objects.get(id=project_id, user=request.user)
+        except Project.DoesNotExist:
+            return JsonResponse({"error": "Project not found or access denied"}, status=403)
+        
         # First check if we have sources in the database
         db_sources = Source.objects.filter(project_id=project_id)
         
@@ -293,11 +400,18 @@ def list_sources(request, project_id):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
+@login_required
 @csrf_exempt
 @require_http_methods(["DELETE"])
 def delete_source(request, project_id, filename):
     """Delete a source from a project"""
     try:
+        # Verify project belongs to user
+        try:
+            project = Project.objects.get(id=project_id, user=request.user)
+        except Project.DoesNotExist:
+            return JsonResponse({"error": "Project not found or access denied"}, status=403)
+        
         document_folder = get_project_document_folder(project_id)
         file_path = os.path.join(document_folder, filename)
         
@@ -309,7 +423,6 @@ def delete_source(request, project_id, filename):
             
             try:
                 # Update project in database
-                project = Project.objects.get(id=project_id)
                 project.sources_count = count_project_sources(project_id)
                 project.save()
                 
@@ -325,6 +438,7 @@ def delete_source(request, project_id, filename):
         return JsonResponse({"error": str(e)}, status=500)
 
 # New Model-specific Endpoints
+@login_required
 @csrf_exempt
 @require_http_methods(["POST"])
 def model_inference(request):
@@ -350,6 +464,7 @@ def model_inference(request):
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
 
+@login_required
 @require_http_methods(["GET"])
 def model_info(request):
     """Get information about the available models and their status"""
@@ -376,6 +491,7 @@ def model_info(request):
             "error": str(e)
         }, status=500)
 
+@login_required
 @require_http_methods(["GET"])
 def model_health(request):
     """Health check endpoint for the model service"""
@@ -395,10 +511,19 @@ def model_health(request):
         }, status=500)
 
 # HTML Views
+@login_required
 def index_view(request):
     """Serve the index.html page"""
     return render(request, 'index.html')
 
+@login_required
 def project_view(request, project_id=None):
     """Serve the web.html page"""
+    # Check if project exists and belongs to user
+    if project_id:
+        try:
+            project = Project.objects.get(id=project_id, user=request.user)
+        except Project.DoesNotExist:
+            return redirect('index')
+    
     return render(request, 'web.html')

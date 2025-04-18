@@ -2,6 +2,11 @@ from django.urls import path
 from . import views
 
 urlpatterns = [
+    # Authentication routes
+    path('login/', views.login_view, name='login'),
+    path('logout/', views.logout_view, name='logout'),
+    path('register/', views.register_view, name='register'),
+    
     # API endpoints for projects
     path('api/projects', views.get_projects, name='get_projects'),
     path('api/projects/<str:project_id>', views.get_project, name='get_project'),
