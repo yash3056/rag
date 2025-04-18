@@ -2,7 +2,6 @@
 import os
 import sys
 import django
-import subprocess
 from pathlib import Path
 
 def initialize_database():
@@ -41,13 +40,11 @@ def initialize_database():
 
 if __name__ == "__main__":
     initialize_database()
-    
-    # After initialization, run the actual server command
     print("Starting Django server...")
-    
-    # Use the same command line arguments passed to this script
-    if len(sys.argv) > 1:
-        subprocess.run([sys.executable, "run.py"] + sys.argv[1:])
-    else:
-        # Default to just running the server if no arguments
-        subprocess.run([sys.executable, "run.py"])
+    import webbrowser
+    webbrowser.open("http://localhost:8000")
+    # run server in current process instead of spawning a subprocess which loops in a PyInstaller bundle
+    from django.core.management import execute_from_command_line
+    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ai_notebook.settings")
+    args = [sys.argv[0], "runserver", "0.0.0.0:8000"] + sys.argv[1:]
+    execute_from_command_line(args)
