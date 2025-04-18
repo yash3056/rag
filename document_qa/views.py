@@ -49,17 +49,29 @@ def create_project(request):
         project_folder = get_project_folder(project_id)
         document_folder = get_project_document_folder(project_id)
         
-        # Create project in database
-        project = Project.objects.create(
-            id=uuid.UUID(project_id),
-            title=data.get("title", ""),
-            description=data.get("description", ""),
-            sources_count=0
-        )
-        
-        return JsonResponse(project.to_dict())
+        try:
+            # Create project in database
+            project = Project.objects.create(
+                id=uuid.UUID(project_id),
+                title=data.get("title", ""),
+                description=data.get("description", ""),
+                sources_count=0
+            )
+            
+            return JsonResponse(project.to_dict())
+        except Exception as e:
+            # Remove project folder if database creation fails
+            if os.path.exists(project_folder):
+                import shutil
+                shutil.rmtree(project_folder)
+            
+            error_msg = f"Database error: {str(e)}"
+            print(error_msg)
+            return JsonResponse({"error": error_msg}, status=500)
     except Exception as e:
-        return JsonResponse({"error": str(e)}, status=400)
+        error_msg = f"Failed to create project: {str(e)}"
+        print(error_msg)
+        return JsonResponse({"error": error_msg}, status=400)
 
 @csrf_exempt
 @require_http_methods(["PATCH"])

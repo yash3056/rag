@@ -161,5 +161,8 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Custom settings for document QA
-PROJECTS_BASE_DIR = 'projects'
+PROJECTS_BASE_DIR = os.path.join(BASE_DIR, 'projects')
 PROJECTS_FILE = 'projects.json'
+
+# Ensure projects directory exists when settings are loaded
+os.makedirs(PROJECTS_BASE_DIR, exist_ok=True)
