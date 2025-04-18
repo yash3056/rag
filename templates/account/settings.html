@@ -1,0 +1,196 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">Account Settings</h3>
+                </div>
+                <div class="card-body">
+                    <ul class="nav nav-tabs" id="settingsTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="profile-tab" data-bs-toggle="tab" data-bs-target="#profile" type="button" role="tab" aria-controls="profile" aria-selected="true">Profile</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="appearance-tab" data-bs-toggle="tab" data-bs-target="#appearance" type="button" role="tab" aria-controls="appearance" aria-selected="false">Appearance</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="security-tab" data-bs-toggle="tab" data-bs-target="#security" type="button" role="tab" aria-controls="security" aria-selected="false">Security</button>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content py-4" id="settingsTabContent">
+                        <!-- Profile Tab -->
+                        <div class="tab-pane fade show active" id="profile" role="tabpanel" aria-labelledby="profile-tab">
+                            <form id="profileForm">
+                                <div class="mb-3">
+                                    <label for="username" class="form-label">Username</label>
+                                    <input type="text" class="form-control" id="username" value="{{ user.username }}" disabled>
+                                    <div class="form-text">Usernames cannot be changed.</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="email" class="form-label">Email address</label>
+                                    <input type="email" class="form-control" id="email" value="{{ user.email }}">
+                                </div>
+                                <button type="submit" class="btn btn-primary">Save Changes</button>
+                            </form>
+                        </div>
+                        
+                        <!-- Appearance Tab -->
+                        <div class="tab-pane fade" id="appearance" role="tabpanel" aria-labelledby="appearance-tab">
+                            <div class="mb-4">
+                                <h5>Theme</h5>
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="darkModeSwitch" checked>
+                                    <label class="form-check-label" for="darkModeSwitch">Dark mode</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Security Tab -->
+                        <div class="tab-pane fade" id="security" role="tabpanel" aria-labelledby="security-tab">
+                            <form id="passwordForm">
+                                <div class="mb-3">
+                                    <label for="currentPassword" class="form-label">Current Password</label>
+                                    <input type="password" class="form-control" id="currentPassword" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="newPassword" class="form-label">New Password</label>
+                                    <input type="password" class="form-control" id="newPassword" required>
+                                </div>
+                                <div class="mb-3">
+                                    <label for="confirmPassword" class="form-label">Confirm New Password</label>
+                                    <input type="password" class="form-control" id="confirmPassword" required>
+                                </div>
+                                <button type="submit" class="btn btn-primary">Change Password</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize theme settings
+        const darkModeSwitch = document.getElementById('darkModeSwitch');
+        
+        // Check if dark mode is enabled in local storage
+        const darkModeEnabled = localStorage.getItem('darkMode') === 'enabled';
+        darkModeSwitch.checked = darkModeEnabled;
+        
+        // Handle dark mode toggle
+        darkModeSwitch.addEventListener('change', function() {
+            if (this.checked) {
+                enableDarkMode();
+            } else {
+                disableDarkMode();
+            }
+        });
+        
+        // Handle profile form submission
+        const profileForm = document.getElementById('profileForm');
+        if (profileForm) {
+            profileForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const email = document.getElementById('email').value;
+                
+                // Send AJAX request to update profile
+                fetch('/api/user/profile', {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ email: email }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Profile updated successfully!');
+                    } else {
+                        alert('Error updating profile: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    alert('Error updating profile: ' + error);
+                });
+            });
+        }
+        
+        // Handle password form submission
+        const passwordForm = document.getElementById('passwordForm');
+        if (passwordForm) {
+            passwordForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                const currentPassword = document.getElementById('currentPassword').value;
+                const newPassword = document.getElementById('newPassword').value;
+                const confirmPassword = document.getElementById('confirmPassword').value;
+                
+                if (newPassword !== confirmPassword) {
+                    alert('New passwords do not match!');
+                    return;
+                }
+                
+                // Send AJAX request to update password
+                fetch('/api/user/password', {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        current_password: currentPassword,
+                        new_password: newPassword
+                    }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert('Password updated successfully!');
+                        passwordForm.reset();
+                    } else {
+                        alert('Error updating password: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    alert('Error updating password: ' + error);
+                });
+            });
+        }
+    });
+    
+    // Dark mode functions - these will be shared across the site
+    function enableDarkMode() {
+        document.body.classList.add('dark-mode');
+        localStorage.setItem('darkMode', 'enabled');
+        
+        // Update the dark theme text in the dropdown
+        const themeItems = document.querySelectorAll('.dropdown-item:has(span.dropdown-icon:contains("🌙"))');
+        themeItems.forEach(item => {
+            const text = item.textContent.trim();
+            if (text.includes('Dark theme:')) {
+                item.innerHTML = '<span class="dropdown-icon">🌙</span> Dark theme: On';
+            }
+        });
+    }
+    
+    function disableDarkMode() {
+        document.body.classList.remove('dark-mode');
+        localStorage.setItem('darkMode', 'disabled');
+        
+        // Update the dark theme text in the dropdown
+        const themeItems = document.querySelectorAll('.dropdown-item:has(span.dropdown-icon:contains("🌙"))');
+        themeItems.forEach(item => {
+            const text = item.textContent.trim();
+            if (text.includes('Dark theme:')) {
+                item.innerHTML = '<span class="dropdown-icon">🌙</span> Dark theme: Off';
+            }
+        });
+    }
+</script>
+{% endblock %}

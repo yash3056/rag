@@ -7,6 +7,12 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
     path('register/', views.register_view, name='register'),
     
+    # User account routes
+    path('account/profile/', views.user_profile_view, name='user_profile'),
+    path('account/settings/', views.settings_view, name='settings'),
+    path('api/user/profile', views.update_user_profile, name='update_user_profile'),
+    path('api/user/password', views.update_user_password, name='update_user_password'),
+    
     # API endpoints for projects
     path('api/projects', views.get_projects, name='get_projects'),
     path('api/projects/<str:project_id>', views.get_project, name='get_project'),

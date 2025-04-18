@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">User Profile</h3>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-4">
+                        <div class="profile-avatar" style="width: 80px; height: 80px; font-size: 2rem;">
+                            {{ user.username|first|upper }}
+                        </div>
+                        <div class="ms-4">
+                            <h4 class="mb-1">{{ user.username }}</h4>
+                            <p class="text-muted mb-1">@{{ user.username|lower }}</p>
+                            {% if user.email %}
+                            <p class="text-muted mb-0">{{ user.email }}</p>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="border-top pt-4 mt-2">
+                        <h5 class="mb-3">Account Information</h5>
+                        <p><strong>Username:</strong> {{ user.username }}</p>
+                        <p><strong>Email:</strong> {{ user.email|default:"Not provided" }}</p>
+                        <p><strong>Member since:</strong> {{ user.date_joined|date:"F j, Y" }}</p>
+                        <p><strong>Last login:</strong> {{ user.last_login|date:"F j, Y, g:i a" }}</p>
+                    </div>
+                    
+                    <div class="border-top pt-4 mt-4">
+                        <h5 class="mb-3">Account Activity</h5>
+                        <p><strong>Projects:</strong> {{ user.project_set.count }}</p>
+                    </div>
+                </div>
+                <div class="card-footer">
+                    <a href="{% url 'settings' %}" class="btn btn-outline-primary">Edit Profile</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

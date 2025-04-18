@@ -510,11 +510,66 @@ def model_health(request):
             "timestamp": datetime.now().isoformat()
         }, status=500)
 
+# User Profile Endpoints
+@login_required
+@csrf_exempt
+@require_http_methods(["PATCH"])
+def update_user_profile(request):
+    """Update user profile information"""
+    try:
+        data = json.loads(request.body)
+        email = data.get('email', '').strip()
+        
+        # Update the user's email
+        user = request.user
+        user.email = email
+        user.save()
+        
+        return JsonResponse({"success": True, "message": "Profile updated successfully"})
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=400)
+
+@login_required
+@csrf_exempt
+@require_http_methods(["PATCH"])
+def update_user_password(request):
+    """Update user password"""
+    try:
+        data = json.loads(request.body)
+        current_password = data.get('current_password', '')
+        new_password = data.get('new_password', '')
+        
+        # Verify current password
+        user = authenticate(username=request.user.username, password=current_password)
+        if user is None:
+            return JsonResponse({"success": False, "error": "Current password is incorrect"}, status=400)
+        
+        # Update password
+        user.set_password(new_password)
+        user.save()
+        
+        # Log the user back in with the new password
+        login(request, user)
+        
+        return JsonResponse({"success": True, "message": "Password updated successfully"})
+    except Exception as e:
+        return JsonResponse({"success": False, "error": str(e)}, status=400)
+
 # HTML Views
 @login_required
 def index_view(request):
     """Serve the index.html page"""
     return render(request, 'index.html')
+
+@login_required
+def user_profile_view(request):
+    """Serve the user profile page"""
+    return render(request, 'account/profile.html')
+
+@login_required
+def settings_view(request):
+    """Serve the settings page"""
+    return render(request, 'account/settings.html')
 
 @login_required
 def project_view(request, project_id=None):

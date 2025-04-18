@@ -4,45 +4,136 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI Projects Dashboard</title>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
-  
-  <!-- CSS styles inline -->
+  <title>Dashboard - Document QA System</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link href="/static/css/dark-mode.css" rel="stylesheet">
   <style>
-    /* Base Styles */
+    :root {
+      --primary: #2c7be5;
+      --secondary: #6c757d;
+      --success: #00d97e;
+      --danger: #e63757;
+      --warning: #f6c343;
+      --info: #39afd1;
+    }
+    
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
     }
-
+    
     body {
-      font-family: 'Inter', sans-serif, Arial;
-      background-color: #121212;
-      color: #f2f2f2;
-      line-height: 1.6;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 14px;
+      line-height: 1.5;
+      color: var(--text-color);
+      background-color: var(--bg-color);
     }
-
-    /* Dashboard Container */
+    
+    /* Dashboard layout */
     .dashboard-container {
+      width: 100%;
       max-width: 1200px;
       margin: 0 auto;
-      padding: 2rem;
+      padding: 1.5rem;
     }
-
-    /* Header Styles */
+    
+    /* Header with title and actions */
     header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding-bottom: 2rem;
-      border-bottom: 1px solid #333;
       margin-bottom: 2rem;
     }
 
     header h1 {
       font-size: 2rem;
       font-weight: 600;
+    }
+    
+    /* Header actions section */
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    /* Profile dropdown styles */
+    .profile-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background-color: #ff0000;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 1rem;
+    }
+    
+    .profile-dropdown {
+      position: relative;
+      display: inline-block;
+    }
+    
+    .profile-dropdown-content {
+      display: none;
+      position: absolute;
+      right: 0;
+      top: 45px;
+      background-color: var(--dropdown-bg);
+      min-width: 250px;
+      box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.3);
+      z-index: 100;
+      border-radius: 8px;
+    }
+    
+    .profile-dropdown-content.show {
+      display: block;
+    }
+    
+    .dropdown-header {
+      padding: 12px 16px;
+      display: flex;
+      align-items: center;
+      border-bottom: 1px solid var(--dropdown-border);
+    }
+    
+    .dropdown-header-info {
+      margin-left: 12px;
+    }
+    
+    .dropdown-section {
+      border-bottom: 1px solid var(--dropdown-border);
+      padding: 8px 0;
+    }
+    
+    .profile-dropdown .dropdown-item {
+      padding: 10px 16px;
+      text-decoration: none;
+      display: block;
+      color: var(--dropdown-text);
+    }
+    
+    .profile-dropdown .dropdown-item:hover {
+      background-color: var(--dropdown-item-hover);
+    }
+    
+    .profile-dropdown .dropdown-icon {
+      margin-right: 10px;
+      width: 20px;
+      text-align: center;
+      color: #3498db;
+    }
+
+    .profile-view-profile {
+      color: #3498db !important;
+      text-decoration: none;
+      font-size: 12px;
     }
 
     /* Button Styles */
@@ -66,15 +157,15 @@
 
     .cancel-btn {
       background-color: transparent;
-      color: #f2f2f2;
-      border: 1px solid #555;
+      color: var(--text-color);
+      border: 1px solid var(--input-border);
       border-radius: 4px;
       padding: 0.5rem 1rem;
       cursor: pointer;
     }
 
     .cancel-btn:hover {
-      background-color: rgba(255, 255, 255, 0.1);
+      background-color: rgba(0, 0, 0, 0.05);
     }
 
     .submit-btn {
@@ -101,28 +192,31 @@
       grid-column: 1 / -1;
       text-align: center;
       padding: 2rem;
-      color: #aaa;
+      color: var(--text-color);
+      opacity: 0.6;
     }
 
     /* Project Card */
     .project-card {
-      background-color: #1e1e1e;
+      background-color: var(--card-bg);
       border-radius: 8px;
       padding: 1.5rem;
       transition: transform 0.2s, box-shadow 0.2s;
       cursor: pointer;
       position: relative; /* Added for dropdown positioning */
+      box-shadow: 0 2px 5px var(--card-shadow);
+      border: 1px solid var(--card-border);
     }
 
     .project-card:hover {
       transform: translateY(-5px);
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 5px 15px var(--card-hover-shadow);
     }
 
     .project-title {
       font-size: 1.2rem;
       margin-bottom: 1rem;
-      color: #fff;
+      color: var(--text-color);
       padding-right: 30px; /* Make space for the menu icon */
     }
 
@@ -138,7 +232,8 @@
     .project-menu-btn {
       background: none;
       border: none;
-      color: #aaa;
+      color: var(--text-color);
+      opacity: 0.7;
       font-size: 1.5rem;
       cursor: pointer;
       display: flex;
@@ -146,23 +241,24 @@
       justify-content: center;
       width: 24px;
       height: 24px;
-      transition: color 0.2s;
+      transition: opacity 0.2s;
     }
 
     .project-menu-btn:hover {
-      color: #fff;
+      opacity: 1;
     }
     
     .dropdown-menu {
       position: absolute;
       top: 100%;
       right: 0;
-      background-color: #2a2a2a;
+      background-color: var(--dropdown-bg);
       border-radius: 4px;
       box-shadow: 0 3px 10px rgba(0, 0, 0, 0.3);
       display: none;
       min-width: 140px;
       z-index: 10;
+      border: 1px solid var(--dropdown-border);
     }
     
     .dropdown-menu.active {
@@ -172,7 +268,7 @@
     .dropdown-item {
       padding: 0.8rem 1rem;
       font-size: 0.9rem;
-      color: #f2f2f2;
+      color: var(--dropdown-text);
       display: flex;
       align-items: center;
       gap: 0.5rem;
@@ -181,11 +277,11 @@
     }
     
     .dropdown-item:hover {
-      background-color: #3a3a3a;
+      background-color: var(--dropdown-item-hover);
     }
     
     .dropdown-item.delete {
-      color: #ff4d4d;
+      color: var(--danger);
     }
 
     /* Modal Styles */
@@ -202,13 +298,14 @@
     }
 
     .modal-content {
-      background-color: #1e1e1e;
+      background-color: var(--modal-bg);
       margin: 10% auto;
       padding: 0;
       width: 90%;
       max-width: 500px;
       border-radius: 8px;
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 5px 15px var(--card-shadow);
+      border: 1px solid var(--modal-border);
     }
 
     .modal-header {
@@ -216,21 +313,23 @@
       justify-content: space-between;
       align-items: center;
       padding: 1rem 1.5rem;
-      border-bottom: 1px solid #333;
+      border-bottom: 1px solid var(--modal-border);
     }
 
     .modal-header h2 {
       font-size: 1.5rem;
+      color: var(--text-color);
     }
 
     .close-modal {
       font-size: 1.8rem;
       cursor: pointer;
-      color: #aaa;
+      color: var(--text-color);
+      opacity: 0.6;
     }
 
     .close-modal:hover {
-      color: #fff;
+      opacity: 1;
     }
 
     /* Form Styles */
@@ -246,14 +345,15 @@
       display: block;
       margin-bottom: 0.5rem;
       font-weight: 500;
+      color: var(--text-color);
     }
 
     input[type="text"], textarea {
       width: 100%;
       padding: 0.75rem;
-      background-color: #2a2a2a;
-      border: 1px solid #444;
-      color: #f2f2f2;
+      background-color: var(--input-bg);
+      border: 1px solid var(--input-border);
+      color: var(--input-color);
       border-radius: 4px;
       font-family: inherit;
       font-size: 1rem;
@@ -275,12 +375,29 @@
       grid-column: 1 / -1;
       text-align: center;
       padding: 4rem 2rem;
-      color: #aaa;
+      color: var(--text-color);
+      opacity: 0.6;
     }
 
     .empty-state i {
       font-size: 4rem;
       margin-bottom: 1rem;
+    }
+
+    /* Project details */
+    .project-details {
+      color: var(--text-color);
+      opacity: 0.7;
+    }
+
+    .detail-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .detail-item .material-icons {
+      font-size: 1rem;
     }
 
     /* Responsive Adjustments */
@@ -306,9 +423,52 @@
   <div class="dashboard-container">
     <header>
       <h1>AI Projects</h1>
-      <button id="createProjectBtn" class="create-btn">
-        <i class="material-icons">add</i> Create New Project
-      </button>
+      <div class="header-actions">
+        <button id="createProjectBtn" class="create-btn">
+          <i class="material-icons">add</i> Create New Project
+        </button>
+        
+        {% if user.is_authenticated %}
+        <div class="profile-dropdown">
+          <div class="profile-avatar" id="profileAvatarBtn" tabindex="0">
+            {{ user.username|first|upper }}
+          </div>
+          <div class="profile-dropdown-content" id="profileDropdown">
+            <div class="dropdown-header">
+              <div class="profile-avatar">{{ user.username|first|upper }}</div>
+              <div class="dropdown-header-info">
+                <div>{{ user.username }}</div>
+                <div><small>@{{ user.username|lower }}</small></div>
+                <div><a href="{% url 'user_profile' %}" class="profile-view-profile">View your profile</a></div>
+              </div>
+            </div>
+            <div class="dropdown-section">
+              <a href="{% url 'user_profile' %}" class="dropdown-item">
+                <span class="dropdown-icon">👤</span> Your Account
+              </a>
+              <a href="{% url 'login' %}" class="dropdown-item">
+                <span class="dropdown-icon">🔄</span> Switch account
+              </a>
+              <a href="{% url 'logout' %}" class="dropdown-item">
+                <span class="dropdown-icon">🚪</span> Sign out
+              </a>
+            </div>
+            <div class="dropdown-section">
+              <a href="{% url 'settings' %}" class="dropdown-item">
+                <span class="dropdown-icon">⚙️</span> Settings
+              </a>
+              <a href="#" class="dropdown-item" id="darkModeToggle">
+                <span class="dropdown-icon">🌙</span> Dark theme: Off
+              </a>
+            </div>
+          </div>
+        </div>
+        {% else %}
+        <a href="{% url 'login' %}" class="create-btn">
+          <i class="material-icons">login</i> Sign In
+        </a>
+        {% endif %}
+      </div>
     </header>
     
     <main>
@@ -407,6 +567,10 @@
     const cancelCreateBtn = document.getElementById('cancelCreateBtn');
     const closeModalBtn = document.querySelector('.close-modal');
     const projectCardTemplate = document.getElementById('projectCardTemplate');
+    
+    // Profile dropdown elements
+    const profileAvatarBtn = document.getElementById('profileAvatarBtn');
+    const profileDropdown = document.getElementById('profileDropdown');
 
     // Event Listeners
     document.addEventListener('DOMContentLoaded', initializeDashboard);
@@ -414,6 +578,51 @@
     cancelCreateBtn.addEventListener('click', closeCreateProjectModal);
     closeModalBtn.addEventListener('click', closeCreateProjectModal);
     createProjectForm.addEventListener('submit', handleCreateProject);
+    
+    // Add profile dropdown toggle
+    if (profileAvatarBtn) {
+      profileAvatarBtn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        profileDropdown.classList.toggle('show');
+      });
+      
+      // Close profile dropdown when clicking outside
+      document.addEventListener('click', function(e) {
+        if (!profileDropdown.contains(e.target) && e.target !== profileAvatarBtn) {
+          profileDropdown.classList.remove('show');
+        }
+      });
+    }
+    
+    // Dark mode functionality
+    const darkModeToggle = document.getElementById('darkModeToggle');
+    if (darkModeToggle) {
+      // Check if dark mode is enabled in local storage
+      const darkModeEnabled = localStorage.getItem('darkMode') === 'enabled';
+      
+      // Set initial state based on local storage
+      if (darkModeEnabled) {
+        document.body.classList.add('dark-mode');
+        darkModeToggle.innerHTML = '<span class="dropdown-icon">🌙</span> Dark theme: On';
+      }
+      
+      // Toggle dark mode when clicked
+      darkModeToggle.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        if (document.body.classList.contains('dark-mode')) {
+          // Switch to light mode
+          document.body.classList.remove('dark-mode');
+          localStorage.setItem('darkMode', 'disabled');
+          darkModeToggle.innerHTML = '<span class="dropdown-icon">🌙</span> Dark theme: Off';
+        } else {
+          // Switch to dark mode
+          document.body.classList.add('dark-mode');
+          localStorage.setItem('darkMode', 'enabled');
+          darkModeToggle.innerHTML = '<span class="dropdown-icon">🌙</span> Dark theme: On';
+        }
+      });
+    }
 
     /**
      * Initialize the dashboard
@@ -433,12 +642,10 @@
      * Fetch projects from the API
      */
     function fetchProjects() {
-      projectsGrid.innerHTML = '<div class="loading-indicator">Loading projects...</div>';
-      
       fetch('/api/projects')
         .then(response => {
           if (!response.ok) {
-            throw new Error('Network response was not ok');
+            throw new Error('Failed to fetch projects');
           }
           return response.json();
         })
@@ -450,64 +657,60 @@
           console.error('Error fetching projects:', error);
           projectsGrid.innerHTML = `
             <div class="empty-state">
-              <i class="material-icons">error</i>
-              <p>Failed to load projects. Please try again later.</p>
+              <i class="material-icons">error_outline</i>
+              <p>Failed to load projects. Please try again.</p>
             </div>
           `;
         });
     }
-
+    
     /**
      * Render projects in the grid
      */
     function renderProjects() {
+      // Clear loading indicator
       projectsGrid.innerHTML = '';
       
       if (projects.length === 0) {
         projectsGrid.innerHTML = `
           <div class="empty-state">
             <i class="material-icons">folder_open</i>
-            <p>No projects yet. Create your first project to get started!</p>
+            <p>You don't have any projects yet.</p>
+            <p>Create a new project to get started!</p>
           </div>
         `;
         return;
       }
       
+      // Create and append project cards
       projects.forEach(project => {
-        const projectCard = createProjectCard(project);
-        projectsGrid.appendChild(projectCard);
+        const card = createProjectCard(project);
+        projectsGrid.appendChild(card);
       });
     }
-
+    
     /**
      * Create a project card from template
      */
     function createProjectCard(project) {
-      const template = projectCardTemplate.content.cloneNode(true);
-      
-      // Fill in project data
-      template.querySelector('.project-title').textContent = project.title;
-      
-      // Format date
-      const date = new Date(project.created_at || project.updated_at);
-      const formattedDate = date.toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      });
-      template.querySelector('.project-date').textContent = formattedDate;
-      
-      // Set sources count
-      template.querySelector('.sources-count').textContent = project.sources_count || 0;
-      
-      // Add menu functionality
+      const template = document.importNode(projectCardTemplate.content, true);
       const card = template.querySelector('.project-card');
-      const menuBtn = template.querySelector('.project-menu-btn');
-      const dropdown = template.querySelector('.dropdown-menu');
-      const editOption = template.querySelector('.edit-project');
-      const deleteOption = template.querySelector('.delete-project');
       
-      // Stop propagation when clicking the menu button
+      // Set project data
+      card.querySelector('.project-title').textContent = project.title;
+      
+      const date = new Date(project.updated_at);
+      card.querySelector('.project-date').textContent = date.toLocaleDateString();
+      
+      const sourcesCount = card.querySelector('.sources-count');
+      sourcesCount.textContent = project.sources_count;
+      
+      // Set up dropdown menu
+      const menuBtn = card.querySelector('.project-menu-btn');
+      const dropdown = card.querySelector('.dropdown-menu');
+      const editOption = card.querySelector('.edit-project');
+      const deleteOption = card.querySelector('.delete-project');
+      
       menuBtn.addEventListener('click', function(e) {
         e.stopPropagation();
         toggleDropdown(dropdown);
@@ -642,42 +845,47 @@
         return response.json();
       })
       .then(updatedProject => {
-        // Update project in local array
-        const index = projects.findIndex(p => p.id === projectId);
+        // Update the project in the local array
+        const index = projects.findIndex(p => p.id === updatedProject.id);
         if (index !== -1) {
           projects[index] = updatedProject;
+          renderProjects();
         }
-        renderProjects();
       });
     }
-
+    
     /**
-     * Open the create project modal
+     * Open create project modal
      */
     function openCreateProjectModal() {
       createProjectModal.style.display = 'block';
       document.getElementById('projectTitle').focus();
     }
-
+    
     /**
-     * Close the create project modal
+     * Close create project modal
      */
     function closeCreateProjectModal() {
       createProjectModal.style.display = 'none';
       createProjectForm.reset();
     }
-
+    
     /**
      * Handle create project form submission
      */
-    function handleCreateProject(event) {
-      event.preventDefault();
+    function handleCreateProject(e) {
+      e.preventDefault();
       
-      const formData = new FormData(createProjectForm);
+      // Get form data
       const projectData = {
-        title: formData.get('title'),
-        description: formData.get('description') || ''
+        title: document.getElementById('projectTitle').value.trim(),
+        description: document.getElementById('projectDescription').value.trim()
       };
+      
+      if (!projectData.title) {
+        alert('Please enter a project title');
+        return;
+      }
       
       // Disable submit button and show loading state
       const submitBtn = createProjectForm.querySelector('.submit-btn');
@@ -719,8 +927,7 @@
           submitBtn.textContent = originalBtnText;
         });
     }
-
-    // Initialize dashboard
+    
     document.addEventListener('DOMContentLoaded', function() {
       initializeDashboard();
       
@@ -756,6 +963,11 @@
           closeEditTitleModal();
         }
       });
+      
+      // Initialize dark mode if enabled
+      if (localStorage.getItem('darkMode') === 'enabled') {
+        document.body.classList.add('dark-mode');
+      }
     });
   </script>
 </body>

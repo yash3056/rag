@@ -8,6 +8,7 @@
   <!-- (Optional) Google Font for a nicer look -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap">
+  <link href="/static/css/dark-mode.css" rel="stylesheet">
 
   <!-- Add Markdown parsing library -->
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -16,6 +17,54 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" />
 
   <style>
+    /* Theme Variables - Default light theme */
+    :root {
+      --bg-color: #f5f7fa;
+      --text-color: #12263f;
+      --header-bg: #ffffff;
+      --panel-bg: #f8f9fa;
+      --panel-border: #d1d9e6;
+      --card-bg: #ffffff;
+      --card-border: #e3e8ef;
+      --input-bg: #ffffff;
+      --input-border: #d2ddec;
+      --input-color: #12263f;
+      --button-bg: #2c7be5;
+      --button-color: #ffffff;
+      --button-hover: #1a68d1;
+      --message-user-bg: #e9f0f9;
+      --message-assistant-bg: #f0f7fa;
+      --message-summary-bg: #e1f5fa;
+      --link-color: #2c7be5;
+      --source-item-bg: #f0f7fa;
+      --source-list-track: #f5f7fa;
+      --source-list-thumb: #d1d9e6;
+    }
+
+    /* Dark Theme Variables */
+    body.dark-mode {
+      --bg-color: #121212;
+      --text-color: #f0f0f0;
+      --header-bg: #0d131b;
+      --panel-bg: #12171f;
+      --panel-border: #3a3a3a;
+      --card-bg: #1e1e1e;
+      --card-border: #333333;
+      --input-bg: #1e1e1e;
+      --input-border: #555555;
+      --input-color: #f0f0f0;
+      --button-bg: #444444;
+      --button-color: #f2f2f2;
+      --button-hover: #555555;
+      --message-user-bg: #1e2a3a;
+      --message-assistant-bg: #1b2a36;
+      --message-summary-bg: #1b3042;
+      --link-color: #61dafb;
+      --source-item-bg: #1a2331;
+      --source-list-track: #12171f;
+      --source-list-thumb: #555;
+    }
+
     /* Reset & Basic Defaults */
     * {
       margin: 0;
@@ -25,8 +74,8 @@
 
     body {
       font-family: 'Inter', sans-serif, Arial, sans-serif;
-      background-color: #1e1e1e;
-      color: #f2f2f2;
+      background-color: var(--bg-color);
+      color: var(--text-color);
       display: flex;
       flex-direction: column;
       min-height: 100vh;
@@ -46,13 +95,14 @@
      * Panel Base Style
      ************************************/
     .panel {
-      border: 2px dashed #3a3a3a;
+      border: 2px dashed var(--panel-border);
       border-radius: 8px;
       padding: 1rem;
       display: flex;
       flex-direction: column;
       height: 100%; /* Use full container height */
       overflow: hidden; /* Prevent panel overflow */
+      background-color: var(--panel-bg);
     }
 
     /************************************
@@ -61,7 +111,6 @@
     .left-panel {
       width: 300px;
       max-width: 320px;
-      background-color: #12171f; /* Changed to bluish-black */
     }
 
     .left-panel h2 {
@@ -70,9 +119,9 @@
     }
 
     .add-source-btn {
-      background-color: #444444;
+      background-color: var(--button-bg);
       border: none;
-      color: #f2f2f2;
+      color: var(--button-color);
       padding: 0.6rem 1rem;
       margin-bottom: 1rem;
       cursor: pointer;
@@ -81,13 +130,14 @@
     }
 
     .add-source-btn:hover {
-      background-color: #555555;
+      background-color: var(--button-hover);
     }
 
     .sources-instructions {
       font-size: 0.9rem;
       line-height: 1.4rem;
-      color: #cccccc;
+      color: var(--text-color);
+      opacity: 0.8;
       margin-bottom: 1rem; /* Reduced margin */
     }
 
@@ -118,12 +168,12 @@
     }
 
     .source-list::-webkit-scrollbar-track {
-      background: #12171f;
+      background: var(--source-list-track);
       border-radius: 4px;
     }
 
     .source-list::-webkit-scrollbar-thumb {
-      background: #555;
+      background: var(--source-list-thumb);
       border-radius: 4px;
     }
 
@@ -132,7 +182,7 @@
     }
 
     .source-list li {
-      background-color: #1a2331; /* Changed to bluish-black */
+      background-color: var(--source-item-bg);
       padding: 0.4rem;
       margin-bottom: 0.5rem;
       border-radius: 4px;
@@ -168,7 +218,6 @@
      ************************************/
     .right-panel {
       flex: 1;
-      background-color: #12171f; /* Changed to bluish-black */
       display: flex;
       flex-direction: column;
     }
@@ -184,7 +233,7 @@
       flex-direction: column;
       flex: 1;
       margin-bottom: 0.5rem; /* Reduced margin */
-      border: 2px dashed #444444;
+      border: 2px dashed var(--panel-border);
       border-radius: 8px;
       padding: 1rem;
       overflow: hidden; /* Important: prevent container overflow */
@@ -201,7 +250,7 @@
     }
 
     .message {
-      background-color: #1a2331; /* Changed to bluish-black */
+      background-color: var(--message-assistant-bg);
       padding: 0.6rem;
       margin-bottom: 0.5rem;
       border-radius: 4px;
@@ -214,7 +263,7 @@
     /* Align user messages to the right if you like, or keep them all on the left */
     .message.user {
       margin-left: auto;
-      background-color: #1e2a3a; /* Changed to bluish-black */
+      background-color: var(--message-user-bg);
     }
 
     /* The input area for new messages */
@@ -227,9 +276,9 @@
       flex: 1;
       padding: 0.6rem;
       border-radius: 4px;
-      border: 1px solid #555555;
-      background-color: #1e1e1e;
-      color: #f2f2f2;
+      border: 1px solid var(--input-border);
+      background-color: var(--input-bg);
+      color: var(--input-color);
       font-family: inherit;
       font-size: 0.9rem;
       line-height: 1.2;
@@ -239,13 +288,14 @@
     }
 
     .chat-input textarea::placeholder {
-      color: #aaaaaa;
+      color: var(--text-color);
+      opacity: 0.6;
     }
 
     .send-btn {
-      background-color: #444444;
+      background-color: var(--button-bg);
       border: none;
-      color: #f2f2f2;
+      color: var(--button-color);
       padding: 0.6rem 1rem;
       cursor: pointer;
       font-size: 0.9rem;
@@ -253,7 +303,7 @@
     }
 
     .send-btn:hover {
-      background-color: #555555;
+      background-color: var(--button-hover);
     }
 
     /* Responsive: stack panels vertically on narrow screens */
@@ -274,11 +324,12 @@
     .message .sources {
       margin-top: 0.5rem;
       font-size: 0.8rem;
-      color: #888888;
+      color: var(--text-color);
+      opacity: 0.6;
     }
 
     .message.assistant {
-      background-color: #1b2a36; /* Changed to bluish-black with teal hint */
+      background-color: var(--message-assistant-bg);
     }
 
     /* Preserve whitespace in messages */
@@ -306,14 +357,14 @@
     }
     
     .markdown-content code {
-      background-color: #2a2a2a;
+      background-color: rgba(0, 0, 0, 0.1);
       padding: 0.2em 0.4em;
       border-radius: 3px;
       font-family: monospace;
     }
     
     .markdown-content pre {
-      background-color: #2a2a2a;
+      background-color: rgba(0, 0, 0, 0.1);
       padding: 1rem;
       border-radius: 4px;
       overflow-x: auto;
@@ -333,7 +384,7 @@
     }
     
     .markdown-content blockquote {
-      border-left: 3px solid #555555;
+      border-left: 3px solid var(--panel-border);
       padding-left: 1rem;
       margin-left: 0;
       margin-right: 0;
@@ -348,12 +399,12 @@
     
     .markdown-content th, 
     .markdown-content td {
-      border: 1px solid #555555;
+      border: 1px solid var(--panel-border);
       padding: 0.5rem;
     }
     
     .markdown-content a {
-      color: #61dafb;
+      color: var(--link-color);
       text-decoration: none;
     }
     
@@ -367,12 +418,12 @@
     }
     
     .chat-messages::-webkit-scrollbar-track {
-      background: #12171f; /* Changed to match background */
+      background: var(--source-list-track);
       border-radius: 4px;
     }
     
     .chat-messages::-webkit-scrollbar-thumb {
-      background: #555;
+      background: var(--source-list-thumb);
       border-radius: 4px;
     }
     
@@ -382,7 +433,7 @@
 
     /* Title/Header styling */
     .header {
-      background-color: #0d131b;
+      background-color: var(--header-bg);
       margin-bottom: 0.5rem;
       border-radius: 8px;
       width: 100%;
@@ -397,15 +448,24 @@
     
     .header-left {
       flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .header-center {
+      flex: 1;
+      display: flex;
+      justify-content: center;
     }
     
     .header-right {
-      flex: 1;
+      flex: 0 0 auto;
       text-align: right;
     }
     
     .dashboard-link {
-      color: #61dafb;
+      color: var(--link-color);
       text-decoration: none;
       font-size: 1.2rem;
       font-weight: 600;
@@ -413,14 +473,14 @@
     }
     
     .dashboard-link:hover {
-      color: #8ae4fd;
+      color: var(--button-hover);
       text-decoration: underline;
     }
     
     .header h1 {
       font-size: 1.8rem;
       font-weight: 600;
-      color: #f2f2f2;
+      color: var(--text-color);
       letter-spacing: 1px;
       margin: 0;
     }
@@ -485,7 +545,7 @@
     }
     
     .summarize-btn {
-      color: #61dafb;
+      color: var(--link-color);
     }
     
     .delete-btn {
@@ -499,7 +559,7 @@
       height: 16px;
       border: 2px solid rgba(97, 218, 251, 0.3);
       border-radius: 50%;
-      border-top-color: #61dafb;
+      border-top-color: var(--link-color);
       animation: spin 1s ease-in-out infinite;
     }
     
@@ -508,7 +568,7 @@
     }
     
     .summary-message {
-      background-color: #1b3042 !important; /* Special blue background for summaries */
+      background-color: var(--message-summary-bg) !important; /* Special background for summaries */
     }
     
     .summary-header {
@@ -518,6 +578,28 @@
       margin-bottom: 8px;
       font-weight: 600;
     }
+
+    /* Theme toggle styles */
+    .theme-toggle {
+      background: none;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: var(--text-color);
+      font-size: 0.9rem;
+      padding: 0.5rem;
+      border-radius: 4px;
+    }
+
+    .theme-toggle:hover {
+      background-color: rgba(0, 0, 0, 0.05);
+    }
+
+    .theme-toggle i {
+      font-size: 18px;
+    }
   </style>
 </head>
 <body>
@@ -526,9 +608,16 @@
   <div class="header-content">
     <div class="header-left">
       <a href="/" class="dashboard-link">AI Notebook</a>
+      <button id="themeToggle" class="theme-toggle">
+        <i class="material-icons">dark_mode</i>
+        <span>Dark Mode</span>
+      </button>
+    </div>
+    <div class="header-center">
+      <h1 id="projectTitle">Project Title</h1>
     </div>
     <div class="header-right">
-      <h1 id="projectTitle">Project Title</h1>
+      <!-- Add any right-aligned content here -->
     </div>
   </div>
 </div>
@@ -598,6 +687,39 @@
 </div>
 
 <script>
+  // Initialize theme based on localStorage preference
+  document.addEventListener("DOMContentLoaded", function() {
+    const darkModeEnabled = localStorage.getItem('darkMode') === 'enabled';
+    const themeToggle = document.getElementById('themeToggle');
+    
+    // Set initial theme state based on localStorage
+    if (darkModeEnabled) {
+      document.body.classList.add('dark-mode');
+      themeToggle.querySelector('i').textContent = 'light_mode';
+      themeToggle.querySelector('span').textContent = 'Light Mode';
+    } else {
+      document.body.classList.remove('dark-mode');
+      themeToggle.querySelector('i').textContent = 'dark_mode';
+      themeToggle.querySelector('span').textContent = 'Dark Mode';
+    }
+    
+    // Setup theme toggle functionality
+    themeToggle.addEventListener('click', () => {
+      document.body.classList.toggle('dark-mode');
+      const isDarkMode = document.body.classList.contains('dark-mode');
+      
+      // Update toggle button UI
+      themeToggle.querySelector('i').textContent = isDarkMode ? 'light_mode' : 'dark_mode';
+      themeToggle.querySelector('span').textContent = isDarkMode ? 'Light Mode' : 'Dark Mode';
+      
+      // Save preference to localStorage
+      localStorage.setItem('darkMode', isDarkMode ? 'enabled' : 'disabled');
+    });
+    
+    // Other initialization
+    fetchSourcesList();
+  });
+
   /********************************************
    * Data Structures
    ********************************************/
@@ -1175,6 +1297,15 @@
       textarea.style.height = textarea.scrollHeight + 'px';
     }, 0);
   }
+
+  // Theme toggle logic
+  const themeToggle = document.getElementById('themeToggle');
+  themeToggle.addEventListener('click', () => {
+    document.body.classList.toggle('dark-mode');
+    const isDarkMode = document.body.classList.contains('dark-mode');
+    themeToggle.querySelector('i').textContent = isDarkMode ? 'light_mode' : 'dark_mode';
+    themeToggle.querySelector('span').textContent = isDarkMode ? 'Light Mode' : 'Dark Mode';
+  });
 
 </script>
 
