@@ -26,6 +26,7 @@ Thumbs.db
 *.sqlite3
 *.db
 *.sqlite
+*.pkl
 
 projects.json
 projects.json.bak
