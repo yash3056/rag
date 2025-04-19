@@ -893,7 +893,7 @@
       submitBtn.disabled = true;
       submitBtn.textContent = 'Creating...';
       
-      fetch('/api/projects', {
+      fetch('/api/projects/create', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -972,3 +972,4 @@
   </script>
 </body>
 </html>
+``` 

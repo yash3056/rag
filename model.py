@@ -65,7 +65,7 @@ def generate_response(prompt, context=None):
     with torch.no_grad():
         output = model.generate(
             **inputs,
-            max_new_tokens=8192,
+            max_new_tokens=1024,
             do_sample=True,
             temperature=0.7,
             top_p=0.9
@@ -156,14 +156,14 @@ def summarize_document(document_text):
     return full_response
 
 # Functions for advanced document summarization
-def chunk_text_for_summary(text, chunk_size=4000, overlap=20):
+def chunk_text_for_summary(text, chunk_size=10000, overlap=200):
     """
     Split text into overlapping chunks for summarization
     
     Args:
         text: The text to be chunked
-        chunk_size: Maximum number of tokens per chunk (approximate)
-        overlap: Number of tokens to overlap between chunks
+        chunk_size: Maximum number of words per chunk (default: 10000)
+        overlap: Number of words to overlap between chunks (default: 200)
         
     Returns:
         List of text chunks with specified overlap
@@ -172,7 +172,7 @@ def chunk_text_for_summary(text, chunk_size=4000, overlap=20):
         print("Warning: Empty text passed to chunking function")
         return []
         
-    # Simple token approximation by splitting on whitespace
+    # Split on whitespace to get words
     words = text.split()
     print(f"Chunking text with {len(words)} words")
     
@@ -189,6 +189,11 @@ def chunk_text_for_summary(text, chunk_size=4000, overlap=20):
         
         # Move start position, accounting for overlap
         start += chunk_size - overlap
+        
+        # First chunk doesn't need overlap
+        if start == chunk_size - overlap:
+            # Adjust for the first chunk which doesn't need overlap
+            start += overlap
     
     print(f"Created {len(chunks)} chunks from text")
     return chunks
@@ -215,13 +220,13 @@ def summarize_chunk(chunk):
     
     return summary
 
-def progressive_summarization(text, max_length=8196):
+def progressive_summarization(text, max_length=10000):
     """
-    Summarize a document using progressive chunking and summarization
+    Summarize a document using overlapping chunks
     
     Args:
         text: The document text to summarize
-        max_length: Maximum approximate length to process at once
+        max_length: Maximum approximate length to process at once (default: 10000)
         
     Returns:
         Complete summary of the document
@@ -236,14 +241,15 @@ def progressive_summarization(text, max_length=8196):
     if len(text.split()) <= max_length:
         print("Text is short enough for direct summarization")
         return summarize_document(text)
-        
-    # Split into overlapping chunks
-    chunks = chunk_text_for_summary(text, chunk_size=max_length, overlap=20)
+    
+    # Use our improved chunking function with 10,000 words per chunk and 200 word overlap
+    chunks = chunk_text_for_summary(text, chunk_size=max_length, overlap=200)
+    print(f"Created {len(chunks)} chunks with {max_length} words per chunk and 200 word overlap")
     
     if not chunks:
         print("Error: No chunks created from text")
         return "Could not generate summary: Failed to process document text."
-        
+    
     # If we only have one chunk after all, summarize directly
     if len(chunks) == 1:
         print("Only one chunk created, summarizing directly")
@@ -256,6 +262,7 @@ def progressive_summarization(text, max_length=8196):
     
     for i, chunk in enumerate(chunks):
         print(f"\nProcessing chunk {i+1}/{len(chunks)}:")
+        # Get summary for this chunk, but don't include the chunk text in the prompt
         chunk_summary = summarize_chunk(chunk)
         if chunk_summary and chunk_summary.strip():
             intermediate_summaries.append(chunk_summary)
@@ -267,12 +274,69 @@ def progressive_summarization(text, max_length=8196):
         print("\n❌ Error: No valid intermediate summaries were generated")
         return "Could not generate summary: Failed to create section summaries."
     
-    # Combine intermediate summaries
-    combined_summary = "\n\n--- Section Summary ---\n\n".join(intermediate_summaries)
+    # Instead of recursively summarizing, link summaries into a coherent whole
+    # Don't include the original chunks in the final prompt
+    combined_summary = "\n\n---SECTION---\n\n".join(intermediate_summaries)
     print(f"\nCombined summary length: {len(combined_summary.split())} words")
     
     print("\nCreating final coherent summary...")
-    prompt = "Using the following section summaries, create a comprehensive and coherent summary of the entire document:"
+    # Create a new prompt that doesn't include chunk content
+    prompt = "The following are summaries of different sections of a document. Create a comprehensive and coherent single summary that integrates them into a well-structured, flowing document. Don't summarize the summaries further, but link them together logically:"
+    
+    # Generate the final summary with only the section summaries, not the original chunks
     final_summary = generate_response(prompt, combined_summary)
     print(f"Final summary length: {len(final_summary.split())} words")
     return final_summary
+
+def recursive_summarize_sections(sections, max_batch_size=5000):
+    """
+    Recursively summarize sections in batches to avoid memory issues
+    
+    Args:
+        sections: List of text sections (summaries) to combine
+        max_batch_size: Maximum approximate batch size in words
+        
+    Returns:
+        Final coherent summary
+    """
+    print(f"\nRecursive summarization with {len(sections)} sections")
+    
+    # Base case: if we have a small enough batch, summarize directly
+    total_words = sum(len(section.split()) for section in sections)
+    print(f"Total word count in current batch: {total_words}")
+    
+    # If we're under the batch size limit, we can summarize directly
+    if total_words < max_batch_size or len(sections) <= 2:
+        # Combine sections with clear section markers
+        combined_text = "\n\n--- Section Summary ---\n\n".join(sections)
+        print(f"\nCreating summary from {len(sections)} sections ({total_words} words)")
+        
+        prompt = "Using the following section summaries, create a comprehensive and coherent summary of the entire document:"
+        summary = generate_response(prompt, combined_text)
+        print(f"Created summary with {len(summary.split())} words")
+        return summary
+    
+    # For larger batches, process in smaller groups recursively
+    print(f"Batch too large ({total_words} words), splitting into smaller batches")
+    
+    # Calculate batch size based on number of sections
+    batch_size = max(2, len(sections) // 4)  # Divide into roughly 4 batches, minimum 2 sections per batch
+    
+    sub_summaries = []
+    for i in range(0, len(sections), batch_size):
+        batch = sections[i:i+batch_size]
+        print(f"Processing sub-batch {i//batch_size + 1} with {len(batch)} sections")
+        
+        # Create mini-summary of this batch
+        combined_batch = "\n\n--- Section Summary ---\n\n".join(batch)
+        batch_word_count = len(combined_batch.split())
+        
+        prompt = "Summarize these connected document sections into a cohesive summary:"
+        batch_summary = generate_response(prompt, combined_batch)
+        
+        print(f"Processed sub-batch {i//batch_size + 1}: {batch_word_count} words → {len(batch_summary.split())} words")
+        sub_summaries.append(batch_summary)
+    
+    # Recursive call with the new sub-summaries
+    print(f"Created {len(sub_summaries)} sub-summaries, recursively summarizing them")
+    return recursive_summarize_sections(sub_summaries, max_batch_size)

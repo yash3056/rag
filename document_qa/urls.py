@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from django.views.decorators.csrf import csrf_exempt
 
 urlpatterns = [
     # Authentication routes
@@ -15,6 +16,7 @@ urlpatterns = [
     
     # API endpoints for projects
     path('api/projects', views.get_projects, name='get_projects'),
+    path('api/projects/create', csrf_exempt(views.create_project), name='create_project'),  # Added explicit create endpoint with CSRF exemption
     path('api/projects/<str:project_id>', views.get_project, name='get_project'),
     
     # HTML pages

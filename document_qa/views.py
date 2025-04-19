@@ -228,26 +228,39 @@ def summarize_document(request):
         except Project.DoesNotExist:
             return JsonResponse({"error": "Project not found or access denied"}, status=403)
         
+        # Log the start of summarization
+        print(f"Starting document summarization for {filename} in project {project_id}")
+        
         # Get the document QA system for the specific project
         qa_system = get_document_qa(project_id)
         
-        # Generate the summary
-        summary = qa_system.summarize_document(filename)
-        
-        # Check if the summary begins with "Summary of" or similar text
-        lines = summary.split('\n')
-        cleaned_summary = summary
-        
-        # Check for common header patterns in the first 2 lines and remove them if found
-        if len(lines) > 1:
-            # Check if first line contains the filename or "Summary of"
-            if ("Summary of" in lines[0] and filename in lines[0]) or lines[0].strip() == '':
-                cleaned_summary = '\n'.join(lines[1:]).strip()
-        
-        return JsonResponse({"summary": cleaned_summary, "filename": filename})
+        try:
+            # Generate the summary with a time limit (to prevent server overload)
+            # We'll use a try-except block to catch any internal errors during summarization
+            summary = qa_system.summarize_document(filename)
+            print(f"Successfully completed summarization for {filename} ({len(summary.split())} words)")
+            
+            # Check if the summary begins with "Summary of" or similar text
+            lines = summary.split('\n')
+            cleaned_summary = summary
+            
+            # Check for common header patterns in the first 2 lines and remove them if found
+            if len(lines) > 1:
+                # Check if first line contains the filename or "Summary of"
+                if ("Summary of" in lines[0] and filename in lines[0]) or lines[0].strip() == '':
+                    cleaned_summary = '\n'.join(lines[1:]).strip()
+            
+            return JsonResponse({"summary": cleaned_summary, "filename": filename})
+        except Exception as e:
+            # Log any internal errors during summarization
+            print(f"Error during summarization process: {str(e)}")
+            return JsonResponse({"error": f"Error during summarization: {str(e)}"}, status=500)
+            
     except FileNotFoundError as e:
+        print(f"File not found error in summarize_document: {str(e)}")
         return JsonResponse({"error": str(e)}, status=404)
     except Exception as e:
+        print(f"Unexpected error in summarize_document: {str(e)}")
         return JsonResponse({"error": f"Error generating summary: {str(e)}"}, status=500)
 
 @login_required

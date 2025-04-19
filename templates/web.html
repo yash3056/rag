@@ -608,10 +608,6 @@
   <div class="header-content">
     <div class="header-left">
       <a href="/" class="dashboard-link">AI Notebook</a>
-      <button id="themeToggle" class="theme-toggle">
-        <i class="material-icons">dark_mode</i>
-        <span>Dark Mode</span>
-      </button>
     </div>
     <div class="header-center">
       <h1 id="projectTitle">Project Title</h1>
@@ -1166,7 +1162,11 @@
     });
     renderChatMessages();
     
-    // Call the API to summarize the document
+    // Create an AbortController to handle timeouts
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 1800000); // 30-minute timeout (1800000ms)
+    
+    // Call the API to summarize the document with increased timeout
     fetch("/summarize", {
       method: "POST",
       headers: {
@@ -1175,9 +1175,11 @@
       body: JSON.stringify({ 
         project_id: currentProjectId,
         filename: filename
-      })
+      }),
+      signal: controller.signal
     })
     .then(response => {
+      clearTimeout(timeoutId); // Clear the timeout
       if (!response.ok) {
         throw new Error(`Server returned ${response.status}: ${response.statusText}`);
       }
@@ -1202,13 +1204,22 @@
       renderChatMessages();
     })
     .catch(error => {
+      clearTimeout(timeoutId); // Clear the timeout if error occurs
       console.error("Error generating summary:", error);
+      
+      // Check if this was a timeout error
+      let errorMessage = error.message;
+      if (error.name === 'AbortError') {
+        errorMessage = "The summarization process took longer than 30 minutes and timed out. Try again with a smaller document or break the document into parts.";
+      } else if (error.message.includes("NetworkError")) {
+        errorMessage = "Network connection error. The document might be too large for summarization or the server might be under heavy load. Try again or try with a smaller document.";
+      }
       
       // Update the loading message with error
       const index = chatMessages.findIndex(msg => msg.id === loadingMessageId);
       if (index !== -1) {
         chatMessages[index] = {
-          text: `Error generating summary for ${filename}: ${error.message}`,
+          text: `Error generating summary for ${filename}: ${errorMessage}`,
           sender: "assistant"
         };
         renderChatMessages();
@@ -1311,4 +1322,3 @@
 
 </body>
 </html>
-``` 
