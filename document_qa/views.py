@@ -250,7 +250,8 @@ def summarize_document(request):
                 if ("Summary of" in lines[0] and filename in lines[0]) or lines[0].strip() == '':
                     cleaned_summary = '\n'.join(lines[1:]).strip()
             
-            return JsonResponse({"summary": cleaned_summary, "filename": filename})
+            # Return just the cleaned text, not as JSON
+            return HttpResponse(cleaned_summary, content_type="text/plain")
         except Exception as e:
             # Log any internal errors during summarization
             print(f"Error during summarization process: {str(e)}")

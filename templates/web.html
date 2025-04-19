@@ -1183,17 +1183,14 @@
       if (!response.ok) {
         throw new Error(`Server returned ${response.status}: ${response.statusText}`);
       }
-      return response.json();
+      return response.text(); // Changed from response.json() to handle plain text response
     })
-    .then(data => {
+    .then(summaryText => {
       // Remove the loading message
       const index = chatMessages.findIndex(msg => msg.id === loadingMessageId);
       if (index !== -1) {
         chatMessages.splice(index, 1);
       }
-      
-      // Extract just the summary text from the response
-      const summaryText = data.summary;
       
       // Add the summary to chat without the JSON structure or filename header
       chatMessages.push({ 
@@ -1262,10 +1259,27 @@
           sanitize: false
         });
         
+        // Check if this is JSON and hide it if the user doesn't want JSON displayed
+        let textToDisplay = msg.text;
+        if (textToDisplay && typeof textToDisplay === 'string') {
+          // Check if this looks like JSON (starts with { or [)
+          if ((textToDisplay.trim().startsWith('{') && textToDisplay.trim().endsWith('}')) || 
+              (textToDisplay.trim().startsWith('[') && textToDisplay.trim().endsWith(']'))) {
+            try {
+              // Try to parse it as JSON to confirm it's valid JSON
+              JSON.parse(textToDisplay);
+              // If it's valid JSON, replace with a message
+              textToDisplay = "The response contains JSON data that has been hidden.";
+            } catch (e) {
+              // Not valid JSON, leave as is
+            }
+          }
+        }
+        
         try {
-          textDiv.innerHTML = marked.parse(msg.text);
+          textDiv.innerHTML = marked.parse(textToDisplay);
         } catch (e) {
-          textDiv.textContent = msg.text;
+          textDiv.textContent = textToDisplay;
           console.error("Markdown parsing error:", e);
         }
         
@@ -1277,8 +1291,7 @@
           sourcesDiv.className = "sources";
           sourcesDiv.innerHTML = "<br><small>Sources:</small>";
           msg.sources.forEach((source, index) => {
-            const relevance = 1.0/(source.distance + 0.01);
-            sourcesDiv.innerHTML += `<br><small>${index + 1}. ${source.metadata.filename} (Relevance: ${relevance.toFixed(2)})</small>`;
+            sourcesDiv.innerHTML += `<br><small>${index + 1}. ${source.metadata.filename}</small>`;
           });
           msgDiv.appendChild(sourcesDiv);
         }
