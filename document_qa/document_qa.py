@@ -50,8 +50,14 @@ class DocumentQA:
             
         print(f"System initialized with {self.index.ntotal if hasattr(self.index, 'ntotal') else 0} document chunks for {pdf_folder}.")
     
-    def answer_question(self, query, top_k=5):
-        """Answer a question using document context and the model"""
+    def answer_question(self, query, top_k=5, selected_sources=None):
+        """Answer a question using document context and the model
+        
+        Args:
+            query (str): The query to answer
+            top_k (int): Number of top search results to use
+            selected_sources (list): Optional list of filenames to filter results by
+        """
         # Search relevant document chunks
         search_results = query_index(
             query, 
@@ -61,6 +67,15 @@ class DocumentQA:
             self.all_chunks, 
             top_k=top_k
         )
+        
+        # Filter results by selected sources if provided
+        if selected_sources and len(selected_sources) > 0:
+            filtered_results = [result for result in search_results 
+                               if result['metadata']['filename'] in selected_sources]
+            
+            # If we have filtered results, use those, otherwise fall back to all results
+            if filtered_results:
+                search_results = filtered_results
         
         # Process query with retrieved context using the LLM
         # No longer passing model_name parameter

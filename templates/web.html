@@ -191,6 +191,24 @@
       justify-content: space-between;
       align-items: center;
     }
+    
+    /* Style for source checkboxes */
+    .source-checkbox {
+      margin-right: 8px;
+      cursor: pointer;
+      min-width: 16px;
+      min-height: 16px;
+      accent-color: var(--button-bg);
+    }
+    
+    /* Adjust source name to account for checkbox */
+    .source-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 160px; /* Reduced width to accommodate checkbox */
+      flex: 1;
+    }
 
     .delete-btn {
       background: none;
@@ -857,6 +875,26 @@
       const sourceItemContent = document.createElement("div");
       sourceItemContent.className = "source-item-content";
       
+      // Add checkbox for source selection (new code)
+      const checkbox = document.createElement("input");
+      checkbox.type = "checkbox";
+      checkbox.className = "source-checkbox";
+      checkbox.checked = true; // Default to checked
+      checkbox.setAttribute("data-filename", src);
+      checkbox.addEventListener("change", function() {
+        // Store the checked state in local storage keyed by project and filename
+        const key = `${currentProjectId}_${src}_checked`;
+        localStorage.setItem(key, checkbox.checked);
+      });
+      
+      // Check if we have a saved state in localStorage
+      const savedCheckedState = localStorage.getItem(`${currentProjectId}_${src}_checked`);
+      if (savedCheckedState !== null) {
+        checkbox.checked = savedCheckedState === "true";
+      }
+      
+      sourceItemContent.appendChild(checkbox);
+      
       // Add filename
       const filename = document.createElement("div");
       filename.className = "source-name";
@@ -1223,7 +1261,15 @@
       renderChatMessages();
       chatInput.value = "";
 
-      // Send query to model with project ID
+      // Get all checked sources from the UI
+      const selectedSources = [];
+      document.querySelectorAll('.source-checkbox').forEach(checkbox => {
+        if (checkbox.checked) {
+          selectedSources.push(checkbox.getAttribute('data-filename'));
+        }
+      });
+
+      // Send query to model with project ID and selected sources
       fetch("/ask", {
         method: "POST",
         headers: {
@@ -1231,7 +1277,8 @@
         },
         body: JSON.stringify({ 
           query: messageText,
-          project_id: currentProjectId
+          project_id: currentProjectId,
+          selected_sources: selectedSources
         })
       })
       .then(response => response.json())

@@ -194,6 +194,7 @@ def ask_question(request):
         data = json.loads(request.body)
         query = data.get("query", "").strip()
         project_id = data.get("project_id")
+        selected_sources = data.get("selected_sources", [])
         
         if not query:
             return JsonResponse({"error": "Query cannot be empty"}, status=400)
@@ -207,7 +208,8 @@ def ask_question(request):
         # Get the document QA system for the specific project
         qa_system = get_document_qa(project_id)
         
-        answer, sources = qa_system.answer_question(query)
+        # Pass the selected sources to the answer_question method
+        answer, sources = qa_system.answer_question(query, selected_sources=selected_sources)
         return JsonResponse({"answer": answer, "sources": sources})
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
