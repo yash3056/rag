@@ -105,8 +105,19 @@ def query_index(query_text, index, model, metadata, all_chunks=None, top_k=5):
     
     results = []
     for dist, idx in zip(distances[0], indices[0]):
+        # Handle invalid float values to prevent the "FloatObject invalid" error
+        try:
+            # Convert distance to a valid Python float and handle potential errors
+            distance_value = float(dist)
+            if not np.isfinite(distance_value):  # Check for NaN, inf, -inf
+                print(f"Warning: Invalid distance value {dist} found, using 0.0 instead")
+                distance_value = 0.0
+        except (ValueError, TypeError) as e:
+            print(f"Warning: Error converting distance {dist} to float: {e}, using 0.0 instead")
+            distance_value = 0.0
+            
         result = {
-            "distance": float(dist),
+            "distance": distance_value,
             "metadata": metadata[idx]
         }
         if all_chunks:

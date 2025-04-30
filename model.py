@@ -210,7 +210,8 @@ def summarize_chunk(chunk):
     print(chunk[:200] + "..." if len(chunk) > 200 else chunk)
     print("-"*40)
     
-    prompt = "Please summarize this section of text concisely and accurately"
+    # Make prompt more explicit to avoid model confusion
+    prompt = "The text below contains content that needs to be summarized. Create a direct summary of this content without asking for more information."
     summary = generate_response(prompt, chunk)
     
     print("\nCHUNK SUMMARY:")
@@ -235,13 +236,14 @@ def progressive_summarization(text, max_length=10000):
         print("Error: Empty document text passed to progressive_summarization")
         return "Could not generate summary: No text content extracted from the document."
     
-    print(f"Starting progressive summarization of text with length: {len(text)}")
+    # Count actual words instead of just characters
+    word_count = len(text.split())
+    print(f"Starting progressive summarization of text with length: {len(text)} characters ({word_count} words)")
     
     # If text is short enough, summarize directly
     if len(text.split()) <= max_length:
         print("Text is short enough for direct summarization")
         return summarize_document(text)
-    
     # Use our improved chunking function with 10,000 words per chunk and 200 word overlap
     chunks = chunk_text_for_summary(text, chunk_size=max_length, overlap=200)
     print(f"Created {len(chunks)} chunks with {max_length} words per chunk and 200 word overlap")
