@@ -213,6 +213,68 @@
       opacity: 1;
     }
 
+    /* Kebab menu styling for source items */
+    .source-kebab-menu {
+      position: relative;
+    }
+    
+    .source-kebab-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-color);
+      opacity: 0.7;
+      transition: opacity 0.2s;
+    }
+    
+    .source-kebab-btn:hover {
+      opacity: 1;
+    }
+    
+    .source-dropdown-menu {
+      position: absolute;
+      right: 0;
+      top: 100%;
+      background-color: var(--card-bg);
+      border: 1px solid var(--panel-border);
+      border-radius: 4px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+      min-width: 120px;
+      z-index: 10;
+      display: none;
+    }
+    
+    .source-dropdown-menu.active {
+      display: block;
+    }
+    
+    .source-dropdown-item {
+      display: flex;
+      align-items: center;
+      padding: 8px 12px;
+      cursor: pointer;
+      color: var(--text-color);
+      font-size: 0.9rem;
+      transition: background-color 0.2s;
+    }
+    
+    .source-dropdown-item:hover {
+      background-color: var(--source-item-bg);
+    }
+    
+    .source-dropdown-item i {
+      margin-right: 8px;
+      font-size: 16px;
+    }
+    
+    .source-dropdown-item.delete {
+      color: var(--danger);
+    }
+
     /************************************
      * Right Panel (Chat)
      ************************************/
@@ -776,6 +838,17 @@
   function updateSourceList() {
     const sourceListEl = document.getElementById("sourceList");
     sourceListEl.innerHTML = "";
+    
+    // Track any open dropdowns
+    let openDropdown = null;
+    
+    // Close any open dropdown when clicking elsewhere
+    document.addEventListener('click', function(e) {
+      if (openDropdown && !openDropdown.contains(e.target)) {
+        openDropdown.querySelector('.source-dropdown-menu').classList.remove('active');
+        openDropdown = null;
+      }
+    });
 
     sources.forEach((src) => {
       const li = document.createElement("li");
@@ -790,33 +863,67 @@
       filename.textContent = src;
       sourceItemContent.appendChild(filename);
       
-      // Create action buttons container
-      const actionButtons = document.createElement("div");
-      actionButtons.className = "source-actions";
+      // Create kebab menu container
+      const kebabMenuContainer = document.createElement("div");
+      kebabMenuContainer.className = "source-kebab-menu";
       
-      // Add summarize button with Material Icon
-      const summarizeBtn = document.createElement("button");
-      summarizeBtn.className = "action-btn summarize-btn";
-      summarizeBtn.setAttribute("title", "Summarize this document");
-      summarizeBtn.innerHTML = '<i class="material-icons">summarize</i>';
-      summarizeBtn.onclick = (e) => {
+      // Create kebab button (three vertical dots)
+      const kebabBtn = document.createElement("button");
+      kebabBtn.className = "source-kebab-btn";
+      kebabBtn.innerHTML = '<i class="material-icons">more_vert</i>';
+      kebabBtn.setAttribute("title", "Options");
+      kebabMenuContainer.appendChild(kebabBtn);
+      
+      // Create dropdown menu
+      const dropdownMenu = document.createElement("div");
+      dropdownMenu.className = "source-dropdown-menu";
+      
+      // Add summarize option
+      const summarizeItem = document.createElement("div");
+      summarizeItem.className = "source-dropdown-item";
+      summarizeItem.innerHTML = '<i class="material-icons">summarize</i> Summarize';
+      summarizeItem.onclick = (e) => {
         e.stopPropagation();
+        // Hide dropdown
+        dropdownMenu.classList.remove('active');
+        // Perform action
         summarizeDocument(src);
       };
-      actionButtons.appendChild(summarizeBtn);
+      dropdownMenu.appendChild(summarizeItem);
       
-      // Add delete button with Material Icon
-      const deleteBtn = document.createElement("button");
-      deleteBtn.className = "action-btn delete-btn";
-      deleteBtn.setAttribute("title", "Delete this file");
-      deleteBtn.innerHTML = '<i class="material-icons">delete</i>';
-      deleteBtn.onclick = (e) => {
+      // Add delete option
+      const deleteItem = document.createElement("div");
+      deleteItem.className = "source-dropdown-item delete";
+      deleteItem.innerHTML = '<i class="material-icons">delete</i> Delete';
+      deleteItem.onclick = (e) => {
         e.stopPropagation();
+        // Hide dropdown
+        dropdownMenu.classList.remove('active');
+        // Perform action
         deleteSource(src);
       };
-      actionButtons.appendChild(deleteBtn);
+      dropdownMenu.appendChild(deleteItem);
       
-      sourceItemContent.appendChild(actionButtons);
+      // Add dropdown to kebab menu container
+      kebabMenuContainer.appendChild(dropdownMenu);
+      
+      // Add click handler for kebab button
+      kebabBtn.onclick = (e) => {
+        e.stopPropagation();
+        
+        // Close any previously open dropdown
+        if (openDropdown && openDropdown !== kebabMenuContainer) {
+          openDropdown.querySelector('.source-dropdown-menu').classList.remove('active');
+        }
+        
+        // Toggle current dropdown
+        dropdownMenu.classList.toggle('active');
+        
+        // Update current open dropdown reference
+        openDropdown = dropdownMenu.classList.contains('active') ? kebabMenuContainer : null;
+      };
+      
+      sourceItemContent.appendChild(kebabMenuContainer);
       li.appendChild(sourceItemContent);
       sourceListEl.appendChild(li);
     });
