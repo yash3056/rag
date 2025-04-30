@@ -78,8 +78,21 @@ class DocumentQA:
                 search_results = filtered_results
         
         # Process query with retrieved context using the LLM
-        # No longer passing model_name parameter
         answer = process_query_with_context(query, search_results)
+        
+        # Extract only the content after 'Task:' line if present
+        if "Task:" in answer:
+            task_parts = answer.split("Task:", 1)
+            if len(task_parts) > 1:
+                # Find the actual response after the task description
+                # Look for an empty line after the task line which typically separates task from response
+                task_part = task_parts[1].strip()
+                parts = task_part.split('\n\n', 1)
+                if len(parts) > 1:
+                    answer = parts[1].strip()
+                else:
+                    answer = task_part
+        
         return answer, search_results
     
     def display_sources(self, search_results):
