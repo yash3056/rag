@@ -1,10 +1,10 @@
 import torch
-from transformers import AutoProcessor, AutoModelForImageTextToText
+from transformers import AutoTokenizer, AutoModelForCausalLM
 import math
 
 def load_model():
-    """Load the Phi-4-mini-reasoning model directly using Hugging Face Transformers"""
-    model_id = "microsoft/Phi-4-mini-reasoning"
+    """Load the microsoft/Phi-4-mini-instruct model directly using Hugging Face Transformers"""
+    model_id = "microsoft/Phi-4-mini-instruct"
     # Chat template for the Microsoft Phi model
     chat_template = "{{ '<|system|>Your name is Phi, an AI math expert developed by Microsoft.' }}{% for message in messages %}{% if message['role'] == 'system' %} {{ message['content'] }}{% if 'tools' in message and message['tools'] is not none %}{{ '<|tool|>' + message['tools'] + '<|/tool|>' }}{% endif %}{% endif %}{% endfor %}{{ '<|end|>' }}{% for message in messages %}{% if message['role'] != 'system' %}{{ '<|' + message['role'] + '|>' + message['content'] + '<|end|>' }}{% endif %}{% endfor %}{% if add_generation_prompt %}{{ '<|assistant|>' }}{% else %}{{ eos_token }}{% endif %}"
     # Note: integrate chat_template in generate_response if using chat-format prompts
@@ -20,14 +20,16 @@ def load_model():
     print(f"Using device: {device}")
     
     # Load model and processor directly instead of using pipeline
-    processor = AutoProcessor.from_pretrained(model_id)
+    processor = AutoTokenizer.from_pretrained(model_id)
     
     # When loading model, use device_map="auto" instead of the specific device
     # This lets HF Transformers handle device mapping automatically
-    model = AutoModelForImageTextToText.from_pretrained(
+    model = AutoModelForCausalLM.from_pretrained(
         model_id,
         torch_dtype=torch.bfloat16,
-        device_map="auto"
+        device_map="auto",
+        trust_remote_code=True,
+
     )
     
     return {"model": model, "processor": processor, "device": device}
