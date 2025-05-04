@@ -475,7 +475,7 @@ def model_inference(request):
         
         return JsonResponse({
             "generated_text": response,
-            "model_name": "gemma3"  # Just hardcode this for the response
+            "model_name": "microsoft/Phi-4-mini-reasoning"
         })
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
@@ -492,8 +492,8 @@ def model_info(request):
         
         # Get model information
         model_info = {
-            "name": "gemma3",
-            "full_name": "google/gemma-3-4b-it",
+            "name": "phi-4-mini-reasoning",
+            "full_name": "microsoft/Phi-4-mini-reasoning",
             "status": "loaded",
             "type": "image-text-to-text",
             "device": model_data["device"],
@@ -502,7 +502,7 @@ def model_info(request):
         return JsonResponse(model_info)
     except Exception as e:
         return JsonResponse({
-            "name": "gemma3",
+            "name": "phi-4-mini-reasoning",
             "status": "error",
             "error": str(e)
         }, status=500)
@@ -516,7 +516,7 @@ def model_health(request):
         model_data = load_model()  # No longer passing the model_name parameter
         return JsonResponse({
             "status": "healthy",
-            "models_available": ["gemma3"],
+            "models_available": ["microsoft/Phi-4-mini-reasoning"],
             "timestamp": datetime.now().isoformat()
         })
     except Exception as e:
