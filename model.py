@@ -5,9 +5,6 @@ import math
 def load_model():
     """Load the microsoft/Phi-4-mini-instruct model directly using Hugging Face Transformers"""
     model_id = "microsoft/Phi-4-mini-instruct"
-    # Chat template for the Microsoft Phi model
-    chat_template = "{{ '<|system|>Your name is Phi, an AI math expert developed by Microsoft.' }}{% for message in messages %}{% if message['role'] == 'system' %} {{ message['content'] }}{% if 'tools' in message and message['tools'] is not none %}{{ '<|tool|>' + message['tools'] + '<|/tool|>' }}{% endif %}{% endif %}{% endfor %}{{ '<|end|>' }}{% for message in messages %}{% if message['role'] != 'system' %}{{ '<|' + message['role'] + '|>' + message['content'] + '<|end|>' }}{% endif %}{% endfor %}{% if add_generation_prompt %}{{ '<|assistant|>' }}{% else %}{{ eos_token }}{% endif %}"
-    # Note: integrate chat_template in generate_response if using chat-format prompts
         
     print(f"Loading model {model_id}...")
     
