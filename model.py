@@ -1,91 +1,30 @@
-import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
-import math
+import requests
 
-def load_model():
-    """Load the microsoft/Phi-4-mini-instruct model directly using Hugging Face Transformers"""
-    model_id = "microsoft/Phi-4-mini-instruct"
-        
-    print(f"Loading model {model_id}...")
-    
-    # Determine the appropriate device
-    if torch.cuda.is_available():
-        device = "cuda"
-    else:
-        device = "cpu"
-    
-    print(f"Using device: {device}")
-    
-    # Load model and processor directly instead of using pipeline
-    processor = AutoTokenizer.from_pretrained(model_id)
-    
-    # When loading model, use device_map="auto" instead of the specific device
-    # This lets HF Transformers handle device mapping automatically
-    model = AutoModelForCausalLM.from_pretrained(
-        model_id,
-        torch_dtype=torch.bfloat16,
-        device_map="auto",
-        trust_remote_code=True,
-
-    )
-    
-    return {"model": model, "processor": processor, "device": device}
-
-# Lazy loading of model as a module-level variable
-_model_cache = None
+BASE_URL = "http://0.0.0.0:8000"
 
 def generate_response(prompt, context=None):
-    """Generate a response using the model with the given prompt and optional context"""
-    global _model_cache
-    
-    # Lazy-load the model on first use
-    if _model_cache is None:
-        _model_cache = load_model()
-    
-    model = _model_cache["model"]
-    processor = _model_cache["processor"]
-    device = _model_cache["device"]
-    
-    # Create a system message that sets the context for the model
+    """Generate a response via vLLM chat API"""
     system_message = "You are a helpful AI assistant focused on document analysis and summarization."
-    
-    # Prepare the prompt with context
+    # Build messages for chat endpoint
+    messages = [
+        {"role": "system", "content": system_message}
+    ]
+    # Combine context and prompt as user content
     if context:
-        full_prompt = f"{system_message}\n\nContent to process:\n\n{context}\n\nTask: {prompt}"
+        user_content = f"Content to process:\n\n{context}\n\nTask: {prompt}"
     else:
-        full_prompt = f"{system_message}\n\n{prompt}"
-    
-    # Process input using the processor
-    inputs = processor(text=full_prompt, return_tensors="pt")
-    
-    # Move input tensors to the appropriate device
-    for key in inputs:
-        if isinstance(inputs[key], torch.Tensor):
-            inputs[key] = inputs[key].to(device)
-    
-    # Generate response
-    with torch.no_grad():
-        output = model.generate(
-            **inputs,
-            max_new_tokens=1024,
-            do_sample=True,
-            temperature=0.7,
-            top_p=0.9
-        )
-    
-    # Decode the output
-    response_text = processor.decode(output[0], skip_special_tokens=True)
-    
-    # Clean up response
-    response_text = response_text.strip()
-    
-    # Remove thinking tags if present
-    while '<think>' in response_text and '</think>' in response_text:
-        think_start = response_text.find('<think>')
-        think_end = response_text.find('</think>') + len('</think>')
-        response_text = response_text[:think_start] + response_text[think_end:]
-    
-    return response_text.strip()
+        user_content = prompt
+    messages.append({"role": "user", "content": user_content})
+    payload = {
+        "messages": messages,
+    }
+    resp = requests.post(f"{BASE_URL}/v1/chat/completions", json=payload)
+    resp.raise_for_status()
+    data = resp.json()
+    # Parse chat response content
+    choice = data.get("choices", [{}])[0]
+    message = choice.get("message", {})
+    return message.get("content", "").strip()
 
 def process_query_with_context(query, search_results):
     """Process a query using retrieved document chunks as context"""

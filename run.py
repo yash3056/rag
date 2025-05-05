@@ -17,6 +17,7 @@ if __name__ == "__main__":
     
     # Default to runserver command if no arguments are provided
     if len(sys.argv) == 1:
-        execute_from_command_line([sys.argv[0], "runserver", "0.0.0.0:8000"])
+        # Run Django on port 8001 to avoid conflict with vLLM API on 8000
+        execute_from_command_line([sys.argv[0], "runserver", "0.0.0.0:8001"])
     else:
         execute_from_command_line(sys.argv)
