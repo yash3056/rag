@@ -17,7 +17,8 @@ urlpatterns = [
     # API endpoints for projects
     path('api/projects', views.get_projects, name='get_projects'),
     path('api/projects/create', csrf_exempt(views.create_project), name='create_project'),  # Added explicit create endpoint with CSRF exemption
-    path('api/projects/<str:project_id>', views.get_project, name='get_project'),
+    # Single-project endpoint supports GET, PATCH, DELETE
+    path('api/projects/<str:project_id>', csrf_exempt(views.project_detail), name='project_detail'),
     
     # HTML pages
     path('', views.index_view, name='index'),

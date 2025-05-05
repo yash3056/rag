@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 
 from django.shortcuts import render, redirect
-from django.http import JsonResponse, HttpResponse
+from django.http import JsonResponse, HttpResponse, HttpResponseNotAllowed
 from django.conf import settings
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
@@ -21,7 +21,8 @@ from .document_qa import (
 )
 
 # Import model-specific functionality
-from model import generate_response, load_model, process_query_with_context
+import requests
+from model import BASE_URL, generate_response
 
 # Authentication Views
 def login_view(request):
@@ -183,6 +184,19 @@ def delete_project(request, project_id):
             return JsonResponse({"error": "Project not found"}, status=404)
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
+
+# Combined GET/PATCH/DELETE for a single project
+@login_required
+@csrf_exempt
+def project_detail(request, project_id):
+    """Handle GET, PATCH, DELETE on a project"""
+    if request.method == 'GET':
+        return get_project(request, project_id)
+    elif request.method == 'PATCH':
+        return update_project(request, project_id)
+    elif request.method == 'DELETE':
+        return delete_project(request, project_id)
+    return JsonResponse({'error': 'Method not allowed'}, status=405)
 
 # API Views for Document QA
 @login_required
@@ -485,46 +499,23 @@ def model_inference(request):
 def model_info(request):
     """Get information about the available models and their status"""
     try:
-        # No longer need to get model_name from request
-        
-        # Load the model to get information
-        model_data = load_model()  # No longer passing the model_name parameter
-        
-        # Get model information
-        model_info = {
-            "name": "phi-4-mini-instruct",
-            "full_name": "microsoft/Phi-4-mini-instruct",
-            "status": "loaded",
-            "type": "image-text-to-text",
-            "device": model_data["device"],
-        }
-        
-        return JsonResponse(model_info)
+        resp = requests.get(f"{BASE_URL}/v1/models")
+        resp.raise_for_status()
+        data = resp.json()
+        return JsonResponse(data)
     except Exception as e:
-        return JsonResponse({
-            "name": "phi-4-mini-instruct",
-            "status": "error",
-            "error": str(e)
-        }, status=500)
+        return JsonResponse({"error": str(e)}, status=500)
 
 @login_required
 @require_http_methods(["GET"])
 def model_health(request):
     """Health check endpoint for the model service"""
     try:
-        # Simple health check - try loading the default model
-        model_data = load_model()  # No longer passing the model_name parameter
-        return JsonResponse({
-            "status": "healthy",
-            "models_available": ["microsoft/Phi-4-mini-instruct"],
-            "timestamp": datetime.now().isoformat()
-        })
+        resp = requests.get(f"{BASE_URL}/health")
+        resp.raise_for_status()
+        return JsonResponse({"status": "healthy", "timestamp": datetime.now().isoformat()})
     except Exception as e:
-        return JsonResponse({
-            "status": "unhealthy",
-            "error": str(e),
-            "timestamp": datetime.now().isoformat()
-        }, status=500)
+        return JsonResponse({"status": "unhealthy", "error": str(e), "timestamp": datetime.now().isoformat()}, status=500)
 
 # User Profile Endpoints
 @login_required
