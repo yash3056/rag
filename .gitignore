@@ -5,6 +5,7 @@ __pycache__/
 
 # Document folder (contains PDF files)
 document/
+projects/
 
 # OpenVino export notebook
 openvino export.ipynb
