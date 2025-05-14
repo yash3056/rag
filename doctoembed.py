@@ -98,7 +98,7 @@ def load_data(index_path="document_index.faiss", metadata_path="metadata.pkl"):
         metadata = pickle.load(f)
     return index, metadata
 
-def query_index(query_text, index, model, metadata, all_chunks=None, top_k=5):
+def query_index(query_text, index, model, metadata, all_chunks=None, top_k=10):
     """Query the index with the given text"""
     query_embedding = model.encode([query_text]).astype("float32")
     distances, indices = index.search(query_embedding, top_k)
