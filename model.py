@@ -181,10 +181,6 @@ def progressive_summarization(text, max_length=10000):
     word_count = len(text.split())
     print(f"Starting progressive summarization of text with length: {len(text)} characters ({word_count} words)")
     
-    # If text is short enough, summarize directly
-    if len(text.split()) <= max_length:
-        print("Text is short enough for direct summarization")
-        return summarize_document(text)
     # Use our improved chunking function with 10,000 words per chunk and 200 word overlap
     chunks = chunk_text_for_summary(text, chunk_size=max_length, overlap=200)
     print(f"Created {len(chunks)} chunks with {max_length} words per chunk and 200 word overlap")
@@ -192,11 +188,6 @@ def progressive_summarization(text, max_length=10000):
     if not chunks:
         print("Error: No chunks created from text")
         return "Could not generate summary: Failed to process document text."
-    
-    # If we only have one chunk after all, summarize directly
-    if len(chunks) == 1:
-        print("Only one chunk created, summarizing directly")
-        return summarize_document(chunks[0])
     
     # Process each chunk to get intermediate summaries
     intermediate_summaries = []
