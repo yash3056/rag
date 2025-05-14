@@ -48,7 +48,7 @@ class DocumentQA:
             
         print(f"System initialized with {self.index.ntotal if hasattr(self.index, 'ntotal') else 0} document chunks for {pdf_folder}.")
     
-    def answer_question(self, query, top_k=5, selected_sources=None):
+    def answer_question(self, query, top_k=10, selected_sources=None):
         """Answer a question using document context and the model
         
         Args:
