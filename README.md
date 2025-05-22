@@ -20,7 +20,7 @@ This is a Django-based web application that provides an AI-powered notebook inte
 
 1. Clone the repository and navigate into the project directory:
    ```bash
-   git clone <repo-url> ai-notebook
+   git clone https://github.com/yash3056/Research_Assistant.git ai-notebook
    cd ai-notebook
    ```
 
