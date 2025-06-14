@@ -25,12 +25,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-z^uytzg_tn+c$%h!7yvfr-7w%79mx5^2g(_4vwg7tzglb7dty_'
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-z^uytzg_tn+c$%h!7yvfr-7w%79mx5^2g(_4vwg7tzglb7dty_')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = ['*']  # Allow all hosts for development
+ALLOWED_HOSTS = ['*']  # Allow all hosts for development and Vercel
 
 # Authentication settings
 LOGIN_URL = '/login/'
@@ -55,9 +55,9 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',  # CORS middleware should be first
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware',  # CORS middleware
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -119,6 +119,13 @@ DATABASES = {
     }
 }
 
+# For production, you might want to use a different database
+# Uncomment and configure the following for PostgreSQL on Vercel:
+# if os.environ.get('DATABASE_URL'):
+#     import dj_database_url
+#     DATABASES['default'] = dj_database_url.parse(os.environ.get('DATABASE_URL'))
+#     DATABASES['default']['CONN_MAX_AGE'] = 600
+
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -154,10 +161,13 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),
 ]
+
+# Static files collection for production
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles_build', 'static')
 
 # Media files (Uploaded files)
 MEDIA_URL = '/media/'
@@ -174,3 +184,12 @@ PROJECTS_FILE = 'projects.json'
 
 # Ensure projects directory exists when settings are loaded
 os.makedirs(PROJECTS_BASE_DIR, exist_ok=True)
+
+# Security settings for production
+if not DEBUG:
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    X_FRAME_OPTIONS = 'DENY'
+    SECURE_HSTS_SECONDS = 3600
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
