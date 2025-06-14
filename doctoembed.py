@@ -1,5 +1,5 @@
 import os
-import PyPDF2
+import pypdf 
 from sentence_transformers import SentenceTransformer
 import faiss
 import numpy as np
@@ -11,7 +11,7 @@ def extract_text_from_pdf(pdf_path):
     text = ""
     try:
         with open(pdf_path, "rb") as file:
-            reader = PyPDF2.PdfReader(file)
+            reader = pypdf.PdfReader(file)
             if len(reader.pages) == 0:
                 print(f"Warning: PDF has no pages: {pdf_path}")
                 return ""
