@@ -9,7 +9,7 @@ from django.conf import settings
 from django.core.files.storage import FileSystemStorage
 
 from doctoembed import process_all, query_index, load_data, extract_text_from_pdf
-from model import load_model, process_query_with_context, progressive_summarization
+from model import process_query_with_context, progressive_summarization
 
 # Create a dictionary to store DocumentQA instances for each project
 document_qa_instances = {}
@@ -17,8 +17,7 @@ document_qa_instances = {}
 class DocumentQA:
     def __init__(self, pdf_folder="document"):
         """Initialize the DocumentQA system with the specified PDF folder"""
-        # No longer need to pass model_name
-        self.model = load_model()
+        # No longer need to load a local model - using Together AI API
         self.initialize_document_system(pdf_folder)
         
     def initialize_document_system(self, pdf_folder):

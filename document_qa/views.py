@@ -21,7 +21,7 @@ from .document_qa import (
 )
 
 # Import model-specific functionality
-from model import generate_response, load_model, process_query_with_context
+from model import generate_response, process_query_with_context
 
 # Authentication Views
 def login_view(request):
@@ -470,12 +470,12 @@ def model_inference(request):
         # Optional parameters
         context = data.get("context", "")
         
-        # Generate response using the model - no longer passing model_name
+        # Generate response using Together AI
         response = generate_response(prompt, context)
         
         return JsonResponse({
             "generated_text": response,
-            "model_name": "microsoft/Phi-4-mini-instruct"
+            "model_name": "deepseek-ai/DeepSeek-R1-Distill-Llama-70B-free"
         })
     except Exception as e:
         return JsonResponse({"error": str(e)}, status=500)
@@ -485,24 +485,19 @@ def model_inference(request):
 def model_info(request):
     """Get information about the available models and their status"""
     try:
-        # No longer need to get model_name from request
-        
-        # Load the model to get information
-        model_data = load_model()  # No longer passing the model_name parameter
-        
-        # Get model information
+        # Get model information for Together AI
         model_info = {
-            "name": "phi-4-mini-instruct",
-            "full_name": "microsoft/Phi-4-mini-instruct",
-            "status": "loaded",
-            "type": "image-text-to-text",
-            "device": model_data["device"],
+            "name": "deepseek-r1-distill-llama-70b",
+            "full_name": "deepseek-ai/DeepSeek-R1-Distill-Llama-70B-free",
+            "status": "available",
+            "type": "text-generation",
+            "provider": "Together AI",
         }
         
         return JsonResponse(model_info)
     except Exception as e:
         return JsonResponse({
-            "name": "phi-4-mini-instruct",
+            "name": "deepseek-r1-distill-llama-70b",
             "status": "error",
             "error": str(e)
         }, status=500)
@@ -512,11 +507,23 @@ def model_info(request):
 def model_health(request):
     """Health check endpoint for the model service"""
     try:
-        # Simple health check - try loading the default model
-        model_data = load_model()  # No longer passing the model_name parameter
+        # Simple health check - verify API key is configured
+        import os
+        from dotenv import load_dotenv
+        load_dotenv()
+        
+        api_key = os.getenv('TOGETHER_API_KEY')
+        if not api_key or api_key == 'your_together_api_key_here':
+            return JsonResponse({
+                "status": "unhealthy",
+                "error": "Together AI API key not configured",
+                "timestamp": datetime.now().isoformat()
+            }, status=500)
+            
         return JsonResponse({
             "status": "healthy",
-            "models_available": ["microsoft/Phi-4-mini-instruct"],
+            "models_available": ["deepseek-ai/DeepSeek-R1-Distill-Llama-70B-free"],
+            "provider": "Together AI",
             "timestamp": datetime.now().isoformat()
         })
     except Exception as e:

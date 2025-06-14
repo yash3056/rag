@@ -1,20 +1,22 @@
-# Research Assitant
+# Research Assistant
 
 ## Overview
-This project is a Django-based web application that enables document ingestion, embedding, and QA using vector search. It provides tools to upload documents, build vector indexes, and query documents with natural language. A Jupyter notebook is also included for experimentation.
+This project is a Django-based web application that enables document ingestion, embedding, and QA using vector search with Together AI. It provides tools to upload documents, build vector indexes, and query documents with natural language using state-of-the-art language models.
 
 ## Features
 - Upload and process documents into FAISS vector indexes
 - Store and manage metadata and embeddings per project
 - Document question-answering via similarity search
+- AI-powered responses using Together AI's DeepSeek-R1-Distill-Llama-70B model
 - Web interface for uploading and querying documents
-- Example Jupyter notebook for prototyping and exploring the pipeline
-- CLI scripts for batch processing and maintenance
+- Document summarization capabilities
+- Project-based organization with user authentication
 
 ## Prerequisites
 - Python 3.11+
 - [pip](https://pip.pypa.io/en/stable/) for package management
 - SQLite (default) or another Django-supported database
+- Together AI API key (sign up at [together.ai](https://together.ai))
 
 ## Installation
 1. Clone the repository:
@@ -31,11 +33,16 @@ This project is a Django-based web application that enables document ingestion, 
    ```bash
    pip install -r requirements.txt
    ```
-4. Apply database migrations:
+4. Configure your Together AI API key:
+   ```bash
+   # Edit the .env file and replace 'your_together_api_key_here' with your actual API key
+   TOGETHER_API_KEY=your_actual_api_key_here
+   ```
+5. Apply database migrations:
    ```bash
    python manage.py migrate
    ```
-5. (Optional) Create a superuser for the Django admin:
+6. (Optional) Create a superuser for the Django admin:
    ```bash
    python create_admin.py
    ```

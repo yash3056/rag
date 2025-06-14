@@ -1,91 +1,117 @@
-import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
-import math
+import os
+from together import Together
+from dotenv import load_dotenv
+from pathlib import Path
+
+# Load environment variables from .env file in the project root
+project_root = Path(__file__).parent
+env_path = project_root / '.env'
+load_dotenv(dotenv_path=env_path)
+
+# Initialize Together client
+api_key = os.getenv('TOGETHER_API_KEY')
+if not api_key:
+    raise ValueError("TOGETHER_API_KEY not found in environment variables. Please check your .env file.")
+
+client = Together(api_key=api_key)
 
 def load_model():
-    """Load the microsoft/Phi-4-mini-instruct model directly using Hugging Face Transformers"""
-    model_id = "microsoft/Phi-4-mini-instruct"
-        
-    print(f"Loading model {model_id}...")
-    
-    # Determine the appropriate device
-    if torch.cuda.is_available():
-        device = "cuda"
-    else:
-        device = "cpu"
-    
-    print(f"Using device: {device}")
-    
-    # Load model and processor directly instead of using pipeline
-    processor = AutoTokenizer.from_pretrained(model_id)
-    
-    # When loading model, use device_map="auto" instead of the specific device
-    # This lets HF Transformers handle device mapping automatically
-    model = AutoModelForCausalLM.from_pretrained(
-        model_id,
-        torch_dtype=torch.bfloat16,
-        device_map="auto",
-        trust_remote_code=True,
+    """This function is kept for compatibility but no longer loads a local model"""
+    return {"status": "Using Together AI API", "model": "deepseek-ai/DeepSeek-R1-Distill-Llama-70B-free"}
 
-    )
-    
-    return {"model": model, "processor": processor, "device": device}
+def estimate_tokens(text):
+    """Estimate token count (rough approximation: 1 token ≈ 4 characters)"""
+    return len(text) // 4
 
-# Lazy loading of model as a module-level variable
-_model_cache = None
-
-def generate_response(prompt, context=None):
-    """Generate a response using the model with the given prompt and optional context"""
-    global _model_cache
-    
-    # Lazy-load the model on first use
-    if _model_cache is None:
-        _model_cache = load_model()
-    
-    model = _model_cache["model"]
-    processor = _model_cache["processor"]
-    device = _model_cache["device"]
-    
-    # Create a system message that sets the context for the model
+def truncate_context_if_needed(prompt, context, max_total_tokens=7000):
+    """Truncate context if the total would exceed token limits"""
     system_message = "You are a helpful AI assistant focused on document analysis and summarization."
     
-    # Prepare the prompt with context
     if context:
-        full_prompt = f"{system_message}\n\nContent to process:\n\n{context}\n\nTask: {prompt}"
+        user_content = f"Content to process:\n\n{context}\n\nTask: {prompt}"
     else:
-        full_prompt = f"{system_message}\n\n{prompt}"
+        user_content = prompt
+        
+    # Estimate tokens for system message and user content
+    system_tokens = estimate_tokens(system_message)
+    user_tokens = estimate_tokens(user_content)
+    total_tokens = system_tokens + user_tokens
     
-    # Process input using the processor
-    inputs = processor(text=full_prompt, return_tensors="pt")
+    if total_tokens > max_total_tokens and context:
+        # Calculate how much context we can keep
+        available_tokens = max_total_tokens - system_tokens - estimate_tokens(f"\n\nTask: {prompt}")
+        available_chars = available_tokens * 4
+        
+        if available_chars > 100:  # Only truncate if we have reasonable space left
+            truncated_context = context[:available_chars] + "...(truncated)"
+            user_content = f"Content to process:\n\n{truncated_context}\n\nTask: {prompt}"
+            print(f"Context truncated from {len(context)} to {len(truncated_context)} characters")
+        else:
+            # If context is too large, just use the prompt
+            user_content = prompt
+            print("Context too large, processing prompt only")
     
-    # Move input tensors to the appropriate device
-    for key in inputs:
-        if isinstance(inputs[key], torch.Tensor):
-            inputs[key] = inputs[key].to(device)
-    
-    # Generate response
-    with torch.no_grad():
-        output = model.generate(
-            **inputs,
-            max_new_tokens=1024,
-            do_sample=True,
+    return user_content, estimate_tokens(user_content)
+
+def generate_response(prompt, context=None):
+    """Generate a response using Together AI API with token management"""
+    try:
+        # Create a system message that sets the context for the model
+        system_message = "You are a helpful AI assistant focused on document analysis and summarization."
+        
+        # Truncate context if needed to stay within token limits
+        user_content, estimated_input_tokens = truncate_context_if_needed(prompt, context)
+        
+        # Build messages for chat endpoint
+        messages = [
+            {"role": "system", "content": system_message},
+            {"role": "user", "content": user_content}
+        ]
+        
+        # Calculate appropriate max_tokens based on input size
+        # DeepSeek model has 8193 max context, leave some buffer
+        max_context = 8000
+        max_new_tokens = min(1200, max_context - estimated_input_tokens)
+        
+        if max_new_tokens < 100:
+            # If we can't fit a reasonable response, try with minimal context
+            max_new_tokens = 800
+            if context:
+                # Use only prompt if context is too large
+                messages = [
+                    {"role": "system", "content": system_message},
+                    {"role": "user", "content": prompt}
+                ]
+                print("Using prompt only due to token constraints")
+        
+        # Call Together AI API
+        response = client.chat.completions.create(
+            model="deepseek-ai/DeepSeek-R1-Distill-Llama-70B-free",
+            messages=messages,
+            max_tokens=max_new_tokens,  # Use max_tokens instead of max_new_tokens
             temperature=0.7,
-            top_p=0.9
+            top_p=0.9,
+            stream=False
         )
-    
-    # Decode the output
-    response_text = processor.decode(output[0], skip_special_tokens=True)
-    
-    # Clean up response
-    response_text = response_text.strip()
-    
-    # Remove thinking tags if present
-    while '<think>' in response_text and '</think>' in response_text:
-        think_start = response_text.find('<think>')
-        think_end = response_text.find('</think>') + len('</think>')
-        response_text = response_text[:think_start] + response_text[think_end:]
-    
-    return response_text.strip()
+        
+        # Extract and return the response content
+        if response and response.choices and len(response.choices) > 0:
+            content = response.choices[0].message.content
+            if content:
+                # Clean up any thinking tags from DeepSeek model
+                cleaned_content = content
+                while '<think>' in cleaned_content and '</think>' in cleaned_content:
+                    think_start = cleaned_content.find('<think>')
+                    think_end = cleaned_content.find('</think>') + len('</think>')
+                    cleaned_content = cleaned_content[:think_start] + cleaned_content[think_end:]
+                
+                return cleaned_content.strip()
+        
+        return "Error: No response generated"
+        
+    except Exception as e:
+        print(f"Error calling Together AI API: {str(e)}")
+        return f"Error generating response: {str(e)}"
 
 def process_query_with_context(query, search_results):
     """Process a query using retrieved document chunks as context"""
@@ -100,18 +126,10 @@ def process_query_with_context(query, search_results):
         context += f"{source_info}\n{chunk_text}\n\n"
     
     # Generate response using the context
-    system_prompt = (
-        "You are a helpful assistant that answers questions based on the provided document sources. "
-        "Include relevant information from the sources and cite them when appropriate."
-    )
-    
-    # Add system prompt to the beginning of context
-    context_with_prompt = f"{system_prompt}\n\n{context}"
-    
-    return generate_response(query, context_with_prompt)
+    return generate_response(query, context)
 
 def summarize_document(document_text):
-    """Summarize a document using the model"""
+    """Summarize a document using Together AI"""
     if not document_text or not document_text.strip():
         return "Error: No text content provided for summarization."
     
@@ -158,13 +176,13 @@ def summarize_document(document_text):
     return full_response
 
 # Functions for advanced document summarization
-def chunk_text_for_summary(text, chunk_size=10000, overlap=200):
+def chunk_text_for_summary(text, chunk_size=7000, overlap=200):
     """
     Split text into overlapping chunks for summarization
     
     Args:
         text: The text to be chunked
-        chunk_size: Maximum number of words per chunk (default: 10000)
+        chunk_size: Maximum number of words per chunk (default: 3000 - reduced for token limits)
         overlap: Number of words to overlap between chunks (default: 200)
         
     Returns:
@@ -176,7 +194,7 @@ def chunk_text_for_summary(text, chunk_size=10000, overlap=200):
         
     # Split on whitespace to get words
     words = text.split()
-    print(f"Chunking text with {len(words)} words")
+    print(f"Chunking text with {len(words)} words into chunks of {chunk_size} words")
     
     chunks = []
     start = 0
@@ -223,13 +241,13 @@ def summarize_chunk(chunk):
     
     return summary
 
-def progressive_summarization(text, max_length=10000):
+def progressive_summarization(text, max_length=3000):
     """
     Summarize a document using overlapping chunks
     
     Args:
         text: The document text to summarize
-        max_length: Maximum approximate length to process at once (default: 10000)
+        max_length: Maximum approximate length to process at once (default: 3000 - reduced for token limits)
         
     Returns:
         Complete summary of the document
@@ -242,7 +260,7 @@ def progressive_summarization(text, max_length=10000):
     word_count = len(text.split())
     print(f"Starting progressive summarization of text with length: {len(text)} characters ({word_count} words)")
     
-    # Use our improved chunking function with 10,000 words per chunk and 200 word overlap
+    # Use our improved chunking function with smaller chunks for token limits
     chunks = chunk_text_for_summary(text, chunk_size=max_length, overlap=200)
     print(f"Created {len(chunks)} chunks with {max_length} words per chunk and 200 word overlap")
     
