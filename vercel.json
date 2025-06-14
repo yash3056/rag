@@ -4,13 +4,9 @@
     {
       "src": "ai_notebook/wsgi.py",
       "use": "@vercel/python",
-      "config": { "maxLambdaSize": "15mb", "runtime": "python3.13.4" }
-    },
-    {
-      "src": "build_files.sh",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "staticfiles_build/static"
+      "config": { 
+        "maxLambdaSize": "50mb", 
+        "runtime": "python3.13"
       }
     }
   ],
