@@ -30,7 +30,8 @@ SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'django-insecure-z^uytzg_tn+c$%
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 
-ALLOWED_HOSTS = ['*']  # Allow all hosts for development and Vercel
+# Remove .vercel.app since no Vercel deployment configuration exists
+ALLOWED_HOSTS = ['localhost', '127.0.0.1'] if not DEBUG else ['*']
 
 # Authentication settings
 LOGIN_URL = '/login/'
@@ -42,7 +43,7 @@ LOGOUT_REDIRECT_URL = '/login/'
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
-    'django.contrib.contenttypes',  # Fixed typo here
+    'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
@@ -65,28 +66,29 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-# CORS settings
-CORS_ALLOW_ALL_ORIGINS = True
-CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_METHODS = [
-    'DELETE',
-    'GET',
-    'OPTIONS',
-    'PATCH',
-    'POST',
-    'PUT',
-]
-CORS_ALLOW_HEADERS = [
-    'accept',
-    'accept-encoding',
-    'authorization',
-    'content-type',
-    'dnt',
-    'origin',
-    'user-agent',
-    'x-csrftoken',
-    'x-requested-with',
-]
+# CORS settings - only enable in development or if explicitly needed
+if DEBUG:
+    CORS_ALLOW_ALL_ORIGINS = True
+    CORS_ALLOW_CREDENTIALS = True
+    CORS_ALLOW_METHODS = [
+        'DELETE',
+        'GET',
+        'OPTIONS',
+        'PATCH',
+        'POST',
+        'PUT',
+    ]
+    CORS_ALLOW_HEADERS = [
+        'accept',
+        'accept-encoding',
+        'authorization',
+        'content-type',
+        'dnt',
+        'origin',
+        'user-agent',
+        'x-csrftoken',
+        'x-requested-with',
+    ]
 
 ROOT_URLCONF = 'ai_notebook.urls'
 
@@ -118,13 +120,6 @@ DATABASES = {
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
-
-# For production, you might want to use a different database
-# Uncomment and configure the following for PostgreSQL on Vercel:
-# if os.environ.get('DATABASE_URL'):
-#     import dj_database_url
-#     DATABASES['default'] = dj_database_url.parse(os.environ.get('DATABASE_URL'))
-#     DATABASES['default']['CONN_MAX_AGE'] = 600
 
 
 # Password validation
@@ -180,7 +175,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Custom settings for document QA
 PROJECTS_BASE_DIR = os.path.join(BASE_DIR, 'projects')
-PROJECTS_FILE = 'projects.json'
 
 # Ensure projects directory exists when settings are loaded
 os.makedirs(PROJECTS_BASE_DIR, exist_ok=True)
