@@ -13,7 +13,7 @@ This project is a Django-based web application that enables document ingestion, 
 - Project-based organization with user authentication
 
 ## Prerequisites
-- Python 3.11+
+- Python 3.13+
 - [pip](https://pip.pypa.io/en/stable/) for package management
 - SQLite (default) or another Django-supported database
 - Together AI API key (sign up at [together.ai](https://together.ai))
@@ -26,12 +26,12 @@ This project is a Django-based web application that enables document ingestion, 
    ```
 2. Create and activate a virtual environment:
    ```bash
-   python3 -m venv venv
-   source venv/bin/activate
+   uv venv
+   source .venv/bin/activate
    ```
 3. Install dependencies:
    ```bash
-   pip install -r requirements.txt
+   uv sync
    ```
 4. Configure your Together AI API key:
    ```bash
@@ -61,10 +61,6 @@ This project is a Django-based web application that enables document ingestion, 
 - `migrate_projects.py`: Reindex or migrate existing project embeddings.
 - `run.py`: Helper to run custom pipelines or server.
 - `startup.py`: Bootstraps environment and services.
-- `tmp.py`: Scratch script for quick tests.
-
-### Jupyter Notebook
-Open `openvino export.ipynb` in the `ai_notebook/` folder to experiment with data processing, embedding, and querying.
 
 ## Project Structure
 ```
