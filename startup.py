@@ -4,6 +4,8 @@ import sys
 import django
 from pathlib import Path
 
+# check if 
+
 def initialize_database():
     """
     Initialize the database by running Django migrations

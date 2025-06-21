@@ -24,6 +24,19 @@ urlpatterns = [
     path('', include('document_qa.urls')),  # Include our app's URLs
 ]
 
-# Serve media files in development
+# Serve static and media files in development
+# Always serve static files in development, regardless of DEBUG setting
+from django.views.static import serve
+from django.urls import re_path
+import os
+
+# Add static file serving patterns
+urlpatterns += [
+    re_path(r'^static/(?P<path>.*)$', serve, {'document_root': settings.STATICFILES_DIRS[0]}),
+    re_path(r'^media/(?P<path>.*)$', serve, {'document_root': settings.MEDIA_ROOT}),
+]
+
+# Also include the standard DEBUG-dependent serving as backup
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATICFILES_DIRS[0])
