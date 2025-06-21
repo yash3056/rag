@@ -38,7 +38,7 @@ LOGOUT_REDIRECT_URL = '/login/'
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
-    'django.contrib.contenttypes',  # Fixed typo here
+    'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
@@ -166,7 +166,6 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Custom settings for document QA
 PROJECTS_BASE_DIR = os.path.join(BASE_DIR, 'projects')
-PROJECTS_FILE = 'projects.json'
 
 # Ensure projects directory exists when settings are loaded
 os.makedirs(PROJECTS_BASE_DIR, exist_ok=True)
