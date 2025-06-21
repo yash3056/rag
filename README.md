@@ -58,8 +58,6 @@ This project is a Django-based web application that enables document ingestion, 
 
 ### CLI Scripts
 - `doctoembed.py`: Convert documents into embeddings and store vectors.
-- `migrate_projects.py`: Reindex or migrate existing project embeddings.
-- `run.py`: Helper to run custom pipelines or server.
 - `startup.py`: Bootstraps environment and services.
 
 ## Project Structure
@@ -74,21 +72,11 @@ This project is a Django-based web application that enables document ingestion, 
 ├── db.sqlite3           # Default SQLite database
 ├── create_admin.py      # Script to create Django superuser
 ├── doctoembed.py        # CLI for document embedding
-├── migrate_projects.py  # Script to migrate or reindex projects
-├── run.py               # Entrypoint for custom runs
 ├── startup.py           # Initialization script
 └── README.md            # Project documentation
 ```
 
-## Configuration
-- `projects.json`: Tracks all project IDs and metadata.
-- `metadata.pkl`: Pickle file for model metadata.
 
-## Testing
-Run Django tests:
-```bash
-python manage.py test
-```
 
 ## License
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
