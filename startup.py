@@ -42,13 +42,12 @@ def initialize_database():
 
 if __name__ == "__main__":
     initialize_database()
-    print("Starting Django server...")
-    import webbrowser
-    import threading
-    # schedule browser opening after server startup delay without blocking server launch
-    # threading.Timer(3, lambda: webbrowser.open("http://localhost:8000")).start()
-    # run server in current process instead of spawning a subprocess which loops in a PyInstaller bundle
-    from django.core.management import execute_from_command_line
-    os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ai_notebook.settings")
-    args = [sys.argv[0], "runserver", "0.0.0.0:8000"] + sys.argv[1:]
-    execute_from_command_line(args)
+    # For local development
+    # print("Starting Django development server...")
+    # from django.core.management import execute_from_command_line
+    # os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ai_notebook.settings")
+    # execute_from_command_line([sys.argv[0], "runserver", "0.0.0.0:8000"] + sys.argv[1:])
+    
+    # For deployment on Render, use Gunicorn
+    # Command: gunicorn ai_notebook.wsgi:application --bind 0.0.0.0:$PORT --workers 3
+    print("Use 'gunicorn ai_notebook.wsgi:application --bind 0.0.0.0:$PORT --workers 3' to start the server in production.")
