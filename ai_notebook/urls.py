@@ -24,6 +24,7 @@ urlpatterns = [
     path('', include('document_qa.urls')),  # Include our app's URLs
 ]
 
-# Serve media files in development
+# Serve static and media files in development
 if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATICFILES_DIRS[0])
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
