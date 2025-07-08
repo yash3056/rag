@@ -14,16 +14,13 @@ dependencies = [
     "sentence-transformers>=4.1.0",
     "together>=1.5.13",
     "torch>=2.7.0",
-    "torchvision>=0.22.0",
 ]
 
 [tool.uv.sources]
 torch = [
     { index = "pytorch-cpu" },
 ]
-torchvision = [
-    { index = "pytorch-cpu" },
-]
+
 
 [[tool.uv.index]]
 name = "pytorch-cpu"
