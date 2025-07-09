@@ -1,49 +1,66 @@
-import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
-import math
+import openvino_genai as ov_genai
+import openvino as ov
+from huggingface_hub import snapshot_download
+import os
+
+def download_model_if_needed():
+    """Download the OpenVINO model if not already present"""
+    model_dir = "ov_model/"
+    
+    # Check if model directory exists and has files
+    if not os.path.exists(model_dir) or not os.listdir(model_dir):
+        print("Downloading OpenVINO model...")
+        snapshot_download(
+            repo_id="yash3056/ov-phi4-mini-reasoning",
+            local_dir=model_dir,
+            local_dir_use_symlinks=False
+        )
+        print("Model download completed.")
+    else:
+        print("OpenVINO model already exists.")
 
 def load_model():
-    """Load the microsoft/Phi-4-mini-instruct model directly using Hugging Face Transformers"""
-    model_id = "microsoft/Phi-4-mini-instruct"
-        
-    print(f"Loading model {model_id}...")
+    """Load the OpenVINO model for inference"""
+    # Ensure model is downloaded
+    download_model_if_needed()
     
-    # Determine the appropriate device
-    if torch.cuda.is_available():
-        device = "cuda"
-    else:
-        device = "cpu"
+    model_dir = "ov_model/"
     
+    # Initialize OpenVINO core and check available devices
+    core = ov.Core()
+    available_devices = core.available_devices
+    
+    # Set device to GPU if available, else CPU
+    device = "GPU" if "GPU" in available_devices else "CPU"
     print(f"Using device: {device}")
     
-    # Load model and processor directly instead of using pipeline
-    processor = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
+    print(f"Loading model from {model_dir}")
     
-    # When loading model, use device_map="auto" instead of the specific device
-    # This lets HF Transformers handle device mapping automatically
-    model = AutoModelForCausalLM.from_pretrained(
-        model_id,
-        torch_dtype=torch.bfloat16,
-        device_map="auto",
-        trust_remote_code=True,
-
-    )
+    # Create LLM pipeline
+    pipe = ov_genai.LLMPipeline(str(model_dir), device)
+    pipe.get_tokenizer().set_chat_template(pipe.get_tokenizer().chat_template)
     
-    return {"model": model, "processor": processor, "device": device}
+    # Set up generation configuration
+    generation_config = ov_genai.GenerationConfig()
+    generation_config.max_new_tokens = 4096
+    generation_config.temperature = 0.7
+    generation_config.top_p = 0.9
+    
+    return {"pipe": pipe, "generation_config": generation_config, "device": device}
 
 # Lazy loading of model as a module-level variable
 _model_cache = None
 
 def generate_response(prompt, context=None):
-    """Generate a response using the model with the given prompt and optional context"""
+    """Generate a response using the OpenVINO model with the given prompt and optional context"""
     global _model_cache
     
     # Lazy-load the model on first use
     if _model_cache is None:
         _model_cache = load_model()
     
-    model = _model_cache["model"]
-    processor = _model_cache["processor"]
+    pipe = _model_cache["pipe"]
+    generation_config = _model_cache["generation_config"]
     device = _model_cache["device"]
     
     # Create a system message that sets the context for the model
@@ -55,26 +72,11 @@ def generate_response(prompt, context=None):
     else:
         full_prompt = f"{system_message}\n\n{prompt}"
     
-    # Process input using the processor
-    inputs = processor(text=full_prompt, return_tensors="pt")
+    # Generate response using OpenVINO GenAI
+    result = pipe.generate(full_prompt, generation_config)
     
-    # Move input tensors to the appropriate device
-    for key in inputs:
-        if isinstance(inputs[key], torch.Tensor):
-            inputs[key] = inputs[key].to(device)
-    
-    # Generate response
-    with torch.no_grad():
-        output = model.generate(
-            **inputs,
-            max_new_tokens=4096,
-            do_sample=True,
-            temperature=0.7,
-            top_p=0.9
-        )
-    
-    # Decode the output
-    response_text = processor.decode(output[0], skip_special_tokens=True)
+    # Extract the response text
+    response_text = result
     
     # Clean up response
     response_text = response_text.strip()
