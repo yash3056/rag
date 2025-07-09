@@ -17,7 +17,7 @@ def load_model():
     print(f"Using device: {device}")
     
     # Load model and processor directly instead of using pipeline
-    processor = AutoTokenizer.from_pretrained(model_id)
+    processor = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True)
     
     # When loading model, use device_map="auto" instead of the specific device
     # This lets HF Transformers handle device mapping automatically
@@ -67,7 +67,7 @@ def generate_response(prompt, context=None):
     with torch.no_grad():
         output = model.generate(
             **inputs,
-            max_new_tokens=1024,
+            max_new_tokens=4096,
             do_sample=True,
             temperature=0.7,
             top_p=0.9
