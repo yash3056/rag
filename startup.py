@@ -3,6 +3,25 @@ import os
 import sys
 import django
 from pathlib import Path
+from huggingface_hub import snapshot_download
+import os
+
+def download_model_if_needed():
+    """Download the OpenVINO model if not already present"""
+    model_dir = "ov_model/"
+    
+    # Check if model directory exists and has files
+    if not os.path.exists(model_dir) or not os.listdir(model_dir):
+        print("Downloading OpenVINO model...")
+        snapshot_download(
+            repo_id="yash3056/ov-phi4-mini-reasoning",
+            local_dir=model_dir,
+            local_dir_use_symlinks=False
+        )
+        print("Model download completed.")
+    else:
+        print("OpenVINO model already exists.")
+
 
 def collect_static_files():
     """
@@ -68,9 +87,10 @@ def initialize_database():
 
 if __name__ == "__main__":
     initialize_database()
+    download_model_if_needed()
     # For local development
     print("Starting Django development server...")
     from django.core.management import execute_from_command_line
     os.environ.setdefault("DJANGO_SETTINGS_MODULE", "ai_notebook.settings")
-    execute_from_command_line([sys.argv[0], "runserver", "0.0.0.0:8000"] + sys.argv[1:])
+    execute_from_command_line([sys.argv[0], "runserver"] + sys.argv[1:])
 
