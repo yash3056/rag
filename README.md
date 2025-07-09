@@ -22,7 +22,7 @@ This project is a Django-based web application that enables document ingestion, 
 1. Clone the repository:
    ```bash
    git clone https://github.com/yash3056/Research_Assistant -b together_api_web_wui
-   cd "Python project"
+   cd Research_Assistant
    ```
 2. Create and activate a virtual environment:
    ```bash
